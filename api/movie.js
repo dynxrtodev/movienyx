@@ -1,5 +1,7 @@
+const https = require('https')
 const crypto = require('crypto')
 const { URL } = require('url')
+
 const H5 = 'https://h5-api.aoneroom.com/wefeed-h5api-bff'
 const MOBILE = 'https://api3.aoneroom.com'
 const HOST = 'officialmoviebox.com'
@@ -58,11 +60,57 @@ function trSignature(method, fullUrl, body) {
   return ts + '|2|' + dig
 }
 
+// === FONDASI HTTP BAWAAN NODE.JS (YANG KEMAREN KEHAPUS) ===
+function httpGet(url, headers) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const req = https.request({
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: 'GET',
+      headers: headers,
+      timeout: 25000
+    }, res => {
+      let data = ''
+      res.setEncoding('utf8')
+      res.on('data', c => data += c)
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }))
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')) })
+    req.end()
+  })
+}
+
+function httpPost(url, headers, body) {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url)
+    const payload = body || ''
+    const h = Object.assign({}, headers, {
+      'Content-Length': Buffer.byteLength(payload)
+    })
+    const req = https.request({
+      hostname: u.hostname,
+      path: u.pathname + u.search,
+      method: 'POST',
+      headers: h,
+      timeout: 25000
+    }, res => {
+      let data = ''
+      res.setEncoding('utf8')
+      res.on('data', c => data += c)
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }))
+    })
+    req.on('error', reject)
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')) })
+    req.write(payload)
+    req.end()
+  })
+}
+
+// === FUNGSI API BYPASS CLOUDFLARE (JUALAN LU) ===
 async function mobileGet(path) {
-  // 1. URL asli untuk keperluan enkripsi Signature
   const originalUrl = MOBILE + path;
-  
-  // 2. URL API Bypass berbayar lu
   const bypassUrl = 'https://api.jerexd.my.id/api/tools/cfwaf?apikey=seven-api&mode=waf&url=' + encodeURIComponent(originalUrl);
   
   const headers = {
@@ -73,23 +121,17 @@ async function mobileGet(path) {
     'X-Client-Token': clientToken(),
     'X-Client-Info': clientInfo(),
     'X-Client-Status': '0',
-    // CRITICAL: Signature harus tetap dienkripsi pakai originalUrl
     'x-tr-signature': trSignature('GET', originalUrl)
   };
   
   if (guestJwt) headers.Authorization = 'Bearer ' + guestJwt;
   
-  // 3. Tembak HTTP GET ke Bypass URL
   return httpGet(bypassUrl, headers);
 }
 
 async function mobilePost(path, bodyObj) {
-  // 1. URL asli untuk keperluan enkripsi Signature
   const originalUrl = MOBILE + path;
-  
-  // 2. URL API Bypass berbayar lu
   const bypassUrl = 'https://api.jerexd.my.id/api/tools/cfwaf?apikey=seven-api&mode=waf&url=' + encodeURIComponent(originalUrl);
-  
   const body = JSON.stringify(bodyObj || {});
   
   const headers = {
@@ -100,61 +142,15 @@ async function mobilePost(path, bodyObj) {
     'X-Client-Token': clientToken(),
     'X-Client-Info': clientInfo(),
     'X-Client-Status': '0',
-    // CRITICAL: Signature harus tetap dienkripsi pakai originalUrl
     'x-tr-signature': trSignature('POST', originalUrl, body)
   };
   
   if (guestJwt) headers.Authorization = 'Bearer ' + guestJwt;
   
-  // 3. Tembak HTTP POST ke Bypass URL
   return httpPost(bypassUrl, headers, body);
 }
 
-function getRandomIndoIP() {
-  return `114.124.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
-}
-
-async function mobileGet(path) {
-  const url = MOBILE + path
-  const fakeIp = getRandomIndoIP();
-  const headers = {
-    'User-Agent': UA_MOB,
-    Accept: 'application/json',
-    'Content-Type': 'application/json;charset=UTF-8',
-    'X-M-Version': '4.0.02',
-    'X-Client-Token': clientToken(),
-    'X-Client-Info': clientInfo(),
-    'X-Client-Status': '0',
-    'x-tr-signature': trSignature('GET', url),
-    // Suntikan IP Palsu
-    'X-Forwarded-For': fakeIp,
-    'X-Real-IP': fakeIp
-  }
-  if (guestJwt) headers.Authorization = 'Bearer ' + guestJwt
-  return httpGet(url, headers)
-}
-
-async function mobilePost(path, bodyObj) {
-  const url = MOBILE + path
-  const body = JSON.stringify(bodyObj || {})
-  const fakeIp = getRandomIndoIP();
-  const headers = {
-    'User-Agent': UA_MOB,
-    Accept: 'application/json',
-    'Content-Type': 'application/json;charset=UTF-8',
-    'X-M-Version': '4.0.02',
-    'X-Client-Token': clientToken(),
-    'X-Client-Info': clientInfo(),
-    'X-Client-Status': '0',
-    'x-tr-signature': trSignature('POST', url, body),
-    // Suntikan IP Palsu
-    'X-Forwarded-For': fakeIp,
-    'X-Real-IP': fakeIp
-  }
-  if (guestJwt) headers.Authorization = 'Bearer ' + guestJwt
-  return httpPost(url, headers, body)
-}
-
+// === SISA FUNGSI MOVIEBOX ===
 async function ensureGuest() {
   if (guestJwt) return guestJwt
   const r = await mobileGet('/wefeed-mobile-bff/tab-operating?page=1&tabId=0')
@@ -165,9 +161,8 @@ async function ensureGuest() {
     guestJwt = raw.startsWith('ey') ? raw : null
   }
   
-  // BAGIAN INI KITA UBAH BIAR KELIATAN ERROR ASLINYA
   if (!guestJwt) {
-    throw new Error(`guest bootstrap failed. Server Status: ${r.status} | Pesan: ${r.body.slice(0, 150)}...`)
+    throw new Error(`guest bootstrap failed. Status Bypass: ${r.status} | Body: ${r.body.slice(0, 150)}...`)
   }
   
   return guestJwt
@@ -266,7 +261,7 @@ async function search(q, page) {
     type: 0
   })
   let j
-  try { j = JSON.parse(r.body) } catch (_) { throw new Error('search bad json') }
+  try { j = JSON.parse(r.body) } catch (_) { throw new Error('search bad json. Body: ' + r.body.slice(0, 100)) }
   if (j.code !== 0) throw new Error(j.message || ('search error ' + r.status))
   const d = j.data || {}
   const items = (d.items || []).map(s => ({
@@ -332,10 +327,8 @@ async function play(id, se, ep) {
       size: s.size,
       duration: s.duration,
       codec: s.codecName,
-      // trap url (dummy) — jangan pakai
       trapUrl: s.url,
       signCookie: s.signCookie,
-      // real stream
       dash: decoded && decoded.mpd,
       hls: decoded && decoded.m3u8,
       prefix: decoded && decoded.prefix,
@@ -349,7 +342,6 @@ async function play(id, se, ep) {
     ep,
     title: d.title,
     streams,
-    // helper: first real mpd
     playUrl: streams[0] && streams[0].dash,
     playHls: streams[0] && streams[0].hls,
     note: streams.length
@@ -358,56 +350,30 @@ async function play(id, se, ep) {
   }
 }
 
-function usage() {
-  console.log([
-    'Usage:',
-    '  node moviebox.js --home',
-    '  node moviebox.js --trending [page]',
-    '  node moviebox.js --search <query> [page]',
-    '  node moviebox.js --detail <subjectId>',
-    '  node moviebox.js --play <subjectId> [se] [ep]',
-    '',
-    'Contoh:',
-    '  node moviebox.js --search naruto',
-    '  node moviebox.js --search "one piece" 2',
-    '  node moviebox.js --home',
-    '  node moviebox.js --detail 223695587521217720',
-    '  node moviebox.js --play 223695587521217720 0 0'
-  ].join('\n'))
-}
+// Mode Vercel API
+module.exports = async (req, res) => {
+  const { action, id, se, ep, page, keyword } = req.query;
 
-// === HAPUS tulisan main() di baris paling bawah, lalu GANTI pakai ini ===
-
-if (require.main === module) {
-  // Mode Terminal (Acode)
-  main()
-} else {
-  // Mode Vercel API
-  module.exports = async (req, res) => {
-    // Vercel otomatis masukin parameter URL ke req.query
-    const { action, id, se, ep, page, keyword } = req.query;
-
-    try {
-      if (action === 'home') {
-        return res.status(200).json(await home());
-      } 
-      else if (action === 'trending') {
-        return res.status(200).json(await trending(page || 0));
-      } 
-      else if (action === 'search' && keyword) {
-        return res.status(200).json(await search(keyword, page || 1));
-      }
-      else if (action === 'detail' && id) {
-        return res.status(200).json(await detail(id));
-      } 
-      else if (action === 'play' && id) {
-        return res.status(200).json(await play(id, se || 0, ep || 0));
-      } 
-      else {
-        return res.status(400).json({ error: 'Action tidak valid atau parameter kurang' });
-      }
-    } catch (error) {
-      return res.status(500).json({ error: error.message });
+  try {
+    if (action === 'home') {
+      return res.status(200).json(await home());
+    } 
+    else if (action === 'trending') {
+      return res.status(200).json(await trending(page || 0));
+    } 
+    else if (action === 'search' && keyword) {
+      return res.status(200).json(await search(keyword, page || 1));
     }
-  };
-}
+    else if (action === 'detail' && id) {
+      return res.status(200).json(await detail(id));
+    } 
+    else if (action === 'play' && id) {
+      return res.status(200).json(await play(id, se || 0, ep || 0));
+    } 
+    else {
+      return res.status(400).json({ error: 'Action tidak valid atau parameter kurang' });
+    }
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
