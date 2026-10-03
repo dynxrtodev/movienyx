@@ -1,0 +1,83 @@
+const grid = document.getElementById('movie-grid');
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+
+// Fungsi utama buat ngerender kotak-kotak film
+function renderMovies(data) {
+  grid.innerHTML = ''; // Bersihin grid
+  
+  if (!data || data.length === 0) {
+    grid.innerHTML = '<p style="text-align:center; grid-column: 1 / -1;">Waduh, filmnya kaga nemu lek.</p>';
+    return;
+  }
+
+  data.forEach(movie => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    
+    const year = movie.releaseDate ? movie.releaseDate.substring(0, 4) : '-';
+    // Cover kadang ada di property 'cover', kadang 'cover.url' tergantung balikan API
+    const coverUrl = typeof movie.cover === 'string' ? movie.cover : (movie.cover?.url || '');
+    
+    card.innerHTML = `
+      <img src="${coverUrl}" alt="${movie.title}" loading="lazy">
+      <div class="info">
+        <div class="title">${movie.title}</div>
+        <div class="meta">
+          <span>⭐ ${movie.imdb || 'N/A'}</span>
+          <span>${year}</span>
+        </div>
+      </div>
+    `;
+    
+    // Nanti ini kita arahin ke halaman detail
+    card.addEventListener('click', () => {
+      console.log(`Lu ngeklik ID: ${movie.subjectId}`);
+      alert(`Otw buka detail film: ${movie.title}`);
+    });
+    
+    grid.appendChild(card);
+  });
+}
+
+// Narik data Trending (Default pas web dibuka)
+async function loadTrending() {
+  grid.innerHTML = '<p style="text-align:center; grid-column: 1 / -1;">Lagi nyedot data trending...</p>';
+  try {
+    const response = await fetch('/api/movie?action=trending');
+    const data = await response.json();
+    renderMovies(data);
+  } catch (err) {
+    grid.innerHTML = `<p style="color:red; text-align:center; grid-column: 1 / -1;">Error: ${err.message}</p>`;
+  }
+}
+
+// Narik data Search
+async function searchMovies(keyword) {
+  grid.innerHTML = `<p style="text-align:center; grid-column: 1 / -1;">Nyari "${keyword}"...</p>`;
+  try {
+    const response = await fetch(`/api/movie?action=search&keyword=${encodeURIComponent(keyword)}`);
+    const result = await response.json();
+    // Berdasarkan script baru lu, balikan search ada di result.results
+    renderMovies(result.results || []); 
+  } catch (err) {
+    grid.innerHTML = `<p style="color:red; text-align:center; grid-column: 1 / -1;">Error: ${err.message}</p>`;
+  }
+}
+
+// Trigger pencarian pas tombol diklik
+searchBtn.addEventListener('click', () => {
+  const keyword = searchInput.value.trim();
+  if (keyword) searchMovies(keyword);
+});
+
+// Trigger pencarian pas pencet Enter di keyboard
+searchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    const keyword = searchInput.value.trim();
+    if (keyword) searchMovies(keyword);
+  }
+});
+
+// Load awal
+loadTrending();

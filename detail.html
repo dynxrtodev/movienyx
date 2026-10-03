@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detail Film - MovieBox Vercel</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Panggil hls.js buat ngebaca format video m3u8 -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+    /* Styling khusus halaman detail */
+    .detail-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .poster-large {
+      width: 100%;
+      max-width: 300px;
+      border-radius: 8px;
+      align-self: center;
+    }
+    .video-container {
+      width: 100%;
+      margin-top: 20px;
+    }
+    video {
+      width: 100%;
+      border-radius: 8px;
+      background: #000;
+    }
+    .btn-back {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: #e50914;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    .tags span {
+      background: #333;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-right: 5px;
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="btn-back">← Kembali ke Beranda</a>
+  
+  <main id="detail-content">
+    <p style="text-align: center;">Mencari kasetnya lek...</p>
+  </main>
+
+  <script src="detail.js"></script>
+</body>
+</html>
