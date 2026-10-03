@@ -1,10 +1,7 @@
 module.exports = async (req, res) => {
-  const { action, url } = req.query;
   const params = new URLSearchParams(req.query).toString();
-  let targetUrl = `http://176.112.152.131:3050/api/movie?${params}`;
-  if (action === 'extract') {
-    targetUrl = `http://176.112.152.131:3050/api/extract?url=${encodeURIComponent(url)}`;
-  }
+  const targetUrl = `http://176.112.152.131:3050/api/movie?${params}`;
+
   try {
     const response = await fetch(targetUrl);
     const data = await response.json();
