@@ -1,6 +1,7 @@
-const https = require('https')
 const crypto = require('crypto')
 const { URL } = require('url')
+// Impor fetch dari omnify-bypass pengganti module 'https' bawaan
+const { fetch } = require('omnify-bypass')
 
 const H5 = 'https://h5-api.aoneroom.com/wefeed-h5api-bff'
 const MOBILE = 'https://api3.aoneroom.com'
@@ -60,54 +61,53 @@ function trSignature(method, fullUrl, body) {
   return ts + '|2|' + dig
 }
 
-function httpGet(url, headers) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(url)
-    const req = https.request({
-      hostname: u.hostname,
-      path: u.pathname + u.search,
+// === FUNGSI HTTP MENGGUNAKAN OMNIFY-BYPASS ===
+
+async function httpGet(url, headers) {
+  try {
+    // omnify-bypass mendukung exponential backoff otomatis dengan parameter retries[span_3](start_span)[span_3](end_span)
+    const res = await fetch(url, {
       method: 'GET',
       headers: headers,
-      timeout: 25000
-    }, res => {
-      let data = ''
-      res.setEncoding('utf8')
-      res.on('data', c => data += c)
-      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }))
-    })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')) })
-    req.end()
-  })
+      retries: 3, 
+      retryDelay: 1000
+    });
+    const body = await res.text();
+    
+    // Rekonstruksi struktur kembalian agar kompatibel dengan sisa script lu
+    const responseHeaders = {};
+    res.headers.forEach((value, name) => {
+      responseHeaders[name.toLowerCase()] = value;
+    });
+
+    return { status: res.status, headers: responseHeaders, body: body };
+  } catch (error) {
+    throw new Error('omnify GET timeout/error: ' + error.message);
+  }
 }
 
-function httpPost(url, headers, body) {
-  return new Promise((resolve, reject) => {
-    const u = new URL(url)
-    const payload = body || ''
-    const h = Object.assign({}, headers, {
-      'Content-Length': Buffer.byteLength(payload)
-    })
-    const req = https.request({
-      hostname: u.hostname,
-      path: u.pathname + u.search,
+async function httpPost(url, headers, payloadStr) {
+  try {
+    const res = await fetch(url, {
       method: 'POST',
-      headers: h,
-      timeout: 25000
-    }, res => {
-      let data = ''
-      res.setEncoding('utf8')
-      res.on('data', c => data += c)
-      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, body: data }))
-    })
-    req.on('error', reject)
-    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')) })
-    req.write(payload)
-    req.end()
-  })
+      headers: headers,
+      body: payloadStr,
+      retries: 3,
+      retryDelay: 1000
+    });
+    const body = await res.text();
+    
+    const responseHeaders = {};
+    res.headers.forEach((value, name) => {
+      responseHeaders[name.toLowerCase()] = value;
+    });
+
+    return { status: res.status, headers: responseHeaders, body: body };
+  } catch (error) {
+    throw new Error('omnify POST timeout/error: ' + error.message);
+  }
 }
 
-// Bikin fungsi kecil buat ngacak IP Indihome/Telkomsel (114.124.x.x)
 function getRandomIndoIP() {
   return `114.124.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
 }
