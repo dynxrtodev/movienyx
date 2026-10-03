@@ -61,30 +61,30 @@ const hero = (m) => `
 
 const skeleton = () => `
   <div class="hero sk"></div>
+  <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>
+  <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>
   <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>`;
 
-function stateBox(title, msg, action) {
-  app.innerHTML = `<div class="state"><h3>${esc(title)}</h3><p>${esc(msg)}</p>${action || ''}</div>`;
-}
+function renderHome(data) {
+  const trend = Array.isArray(data.trending) ? data.trending : [];
+  const latest = Array.isArray(data.latest) ? data.latest : [];
+  const upcoming = Array.isArray(data.upcoming) ? data.upcoming : [];
+  const topRated = Array.isArray(data.toprated) ? data.toprated : [];
 
-async function api(q) {
-  const r = await fetch(`/api/movie?${q}`);
-  if (!r.ok) throw new Error(`Server membalas ${r.status}`);
-  return r.json();
-}
-
-function renderHome(list) {
-  if (!list || !list.length) {
-    stateBox('Belum ada film', 'Daftar trending kosong. Coba lagi sebentar lagi.', '<button class="btn red" data-retry>Muat ulang</button>');
+  if (!trend.length && !latest.length) {
+    stateBox('Belum ada film', 'Daftar film kosong. Coba lagi sebentar lagi.', '<button class="btn red" data-retry>Muat ulang</button>');
     return;
   }
-  const rest = list.slice(10);
-  const top = list.slice(0, 10).map((m, i) => `<div class="tn"><i>${i + 1}</i>${card(m)}</div>`).join('');
+
+  const top10 = trend.slice(0, 10).map((m, i) => `<div class="tn"><i>${i + 1}</i>${card(m)}</div>`).join('');
+  
   app.innerHTML =
-    hero(list[0]) +
+    (trend[0] ? hero(trend[0]) : '') +
     continueRow() +
-    row('Top 10 hari ini', top, { top: true }) +
-    (rest.length ? `<section class="sec"><div class="sec-head"><h2>Jelajahi</h2></div><div class="grid">${rest.map(card).join('')}</div></section>` : '');
+    (top10 ? row('Top 10 Hari Ini', top10, { top: true }) : '') +
+    (latest.length ? row('Baru Ditambahkan', latest.map(card).join('')) : '') +
+    (topRated.length ? row('Rating Tertinggi', topRated.map(card).join('')) : '') +
+    (upcoming.length ? row('Segera Tayang', upcoming.map(card).join('')) : '');
 }
 
 async function loadHome() {
@@ -92,14 +92,27 @@ async function loadHome() {
   retry = loadHome;
   scrollTo(0, 0);
   app.innerHTML = skeleton();
+  
   try {
-    const d = await api('action=trending');
+    // Tarik semua data secara paralel biar ngebut
+    const [trendRes, latestRes, upRes, topRes] = await Promise.all([
+      api('action=trending'),
+      api('action=latest'),
+      api('action=upcoming'),
+      api('action=toprated')
+    ]);
+
     if (my !== token) return;
-    const list = d.results || d;
-    renderHome(Array.isArray(list) ? list : []);
+
+    renderHome({
+      trending: trendRes.results || trendRes,
+      latest: latestRes.results || latestRes,
+      upcoming: upRes.results || upRes,
+      toprated: topRes.results || topRes
+    });
   } catch (err) {
     if (my !== token) return;
-    stateBox('Film gagal dimuat', err.message, '<button class="btn red" data-retry>Coba lagi</button>');
+    stateBox('Beranda gagal dimuat', err.message, '<button class="btn red" data-retry>Coba lagi</button>');
   }
 }
 
