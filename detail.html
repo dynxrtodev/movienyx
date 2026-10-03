@@ -3,53 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Detail Film - MovieNyx</title>
+  <meta name="theme-color" content="#100a0b">
+  <title>Detail Film - Movienyx</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
-  <style>
-    /* Styling khusus halaman detail */
-    .detail-wrapper {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-    .poster-large {
-      width: 100%;
-      max-width: 300px;
-      border-radius: 8px;
-      align-self: center;
-    }
-    .video-container {
-      width: 100%;
-      margin-top: 20px;
-    }
-    video {
-      width: 100%;
-      border-radius: 8px;
-      background: #000;
-    }
-    .btn-back {
-      display: inline-block;
-      margin-bottom: 20px;
-      color: #e50914;
-      text-decoration: none;
-      font-weight: bold;
-    }
-    .tags span {
-      background: #333;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      margin-right: 5px;
-    }
-  </style>
 </head>
 <body>
-  <a href="index.html" class="btn-back">← Kembali ke Beranda</a>
-  
-  <main id="detail-content">
-    <p style="text-align: center;">Mencari kasetnya lek...</p>
+  <header class="nav" id="nav">
+    <a class="back" href="index.html" aria-label="Kembali ke beranda"><span data-i="back"></span></a>
+    <a class="logo" href="index.html" aria-label="Movienyx, ke beranda"><span data-i="film"></span>Movienyx</a>
+  </header>
+
+  <main id="detail" aria-live="polite">
+    <div class="state"><h3>Menyiapkan layar...</h3></div>
   </main>
 
+  <footer>Movienyx Beta &middot; Nonton Movie Ternyaman Dan Bebas Iklan!</footer>
+
+  <script src="ui.js"></script>
   <script src="detail.js"></script>
 </body>
 </html>

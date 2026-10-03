@@ -3,28 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#100a0b">
   <title>Movienyx Beta</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header>
-    <h1>🎬 Movienyx Beta</h1>
-    <p>Nonton Gratis Jalur Scrape</p>
-    
-    <div class="search-container" style="margin-top: 15px;">
-      <input type="text" id="searchInput" placeholder="Cari film atau series..." 
-             style="padding: 8px; width: 60%; max-width: 300px; border-radius: 4px; border: none;">
-      <button id="searchBtn" 
-              style="padding: 8px 15px; background: #e50914; color: white; border: none; border-radius: 4px; cursor: pointer;">
-        Cari
-      </button>
-    </div>
+  <header class="nav" id="nav">
+    <a class="logo" href="index.html" aria-label="Movienyx, ke beranda"><span data-i="film"></span>Movienyx</a>
+    <form class="search" id="searchForm" role="search">
+      <button type="submit" id="searchBtn" aria-label="Cari"><span data-i="search"></span></button>
+      <input id="searchInput" type="search" placeholder="Judul film atau series" autocomplete="off" aria-label="Cari film atau series">
+    </form>
   </header>
 
-  <!-- Tempat di mana poster film bakal muncul -->
-  <main id="movie-grid" class="grid"></main>
+  <main id="app" aria-live="polite"></main>
 
-  <!-- Pemanggil script yang hilang -->
+  <footer>Movienyx Beta &middot; Nonton Movie Ternyaman Dan Bebas Iklan!</footer>
+
+  <script src="ui.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

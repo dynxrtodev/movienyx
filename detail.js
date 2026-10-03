@@ -1,80 +1,102 @@
-const content = document.getElementById('detail-content');
+const content = $('#detail');
+const slugId = new URLSearchParams(location.search).get('id');
 
-// Ambil ID (slug) dari URL (misal: detail.html?id=goat-2024)
-const urlParams = new URLSearchParams(window.location.search);
-const slugId = urlParams.get('id');
+const isDirect = (u) => /\.(mp4|webm|ogv)(\?|#|$)/i.test(u || '');
+
+function stateBox(title, msg) {
+  content.innerHTML = `<div class="state"><h3>${esc(title)}</h3><p>${esc(msg)}</p><a class="btn red" href="index.html">Kembali ke beranda</a></div>`;
+}
 
 async function loadDetail() {
-  if (!slugId) {
-    content.innerHTML = '<p style="color:red; text-align:center;">Waduh, ID filmnya kaga ada.</p>';
-    return;
-  }
-
+  if (!slugId) return stateBox('Film tidak ditemukan', 'Alamat halaman ini tidak memuat ID film.');
   try {
-    // Cuma butuh 1 fetch karena detail dari Moviezone udah sekalian ngasih link embed video
-    const res = await fetch(`/api/movie?action=detail&id=${slugId}`);
+    const res = await fetch(`/api/movie?action=detail&id=${encodeURIComponent(slugId)}`);
+    if (!res.ok) throw new Error(`Server membalas ${res.status}`);
     const movie = await res.json();
-    
     if (movie.error) throw new Error(movie.error);
-    
     renderDetail(movie);
   } catch (err) {
-    content.innerHTML = `<p style="color:red; text-align:center;">Error gagal muat: ${err.message}</p>`;
+    stateBox('Detail film gagal dimuat', err.message);
+  }
+}
+
+// Gabungkan stream utama + server cadangan tanpa duplikat
+function getServers(movie) {
+  const list = [];
+  if (movie.primary_stream) list.push({ name: 'Utama', url: movie.primary_stream });
+  (movie.servers || []).forEach((s) => {
+    if (s && s.url && !list.some((x) => x.url === s.url)) list.push({ name: s.name || `Server ${list.length + 1}`, url: s.url });
+  });
+  return list;
+}
+
+function setSource(url) {
+  const screen = $('#screen');
+  screen.innerHTML = isDirect(url)
+    ? `<video controls playsinline preload="metadata" src="${esc(url)}"></video>`
+    : `<iframe src="${esc(url)}" title="Pemutar Movienyx" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen></iframe>`;
+  $('#openTab').href = url;
+  const v = screen.querySelector('video');
+  if (v) {
+    v.addEventListener('error', () => {
+      screen.insertAdjacentHTML('beforeend', '<div class="perr"><b>Video tidak bisa diputar di server ini</b><span>Coba server lain di bawah layar.</span></div>');
+    });
   }
 }
 
 function renderDetail(movie) {
-  // Looping tombol server biar user bisa ganti kalau videonya macet
-  let serverButtons = '';
-  if (movie.servers && movie.servers.length > 0) {
-    serverButtons = movie.servers.map((s) => 
-      `<button onclick="document.getElementById('iframe-player').src='${s.url}'" 
-               style="padding: 6px 12px; margin-right: 8px; margin-bottom: 8px; background: #333; color: white; border: 1px solid #555; cursor:pointer; border-radius:4px; font-weight:bold;">
-        ${s.name}
-      </button>`
-    ).join('');
-  }
+  document.title = `${movie.title} - Movienyx`;
+  const servers = getServers(movie);
+  const poster = esc(movie.poster || NOPOSTER);
 
   content.innerHTML = `
-    <div class="detail-wrapper">
-      <img src="${movie.poster}" alt="${movie.title}" class="poster-large">
-      
+    <section class="dh">
+      <div class="bd" style="background-image:url('${poster}')"></div>
+      <img class="po" src="${poster}" alt="${esc(movie.title)}" onerror="this.onerror=null;this.src=NOPOSTER">
       <div>
-        <h1 style="margin-bottom: 10px;">${movie.title}</h1>
-        <div class="tags" style="margin-bottom: 15px;">
-          <span>⭐ ${movie.rating || 'N/A'}</span>
-          <span>${movie.year || '-'}</span>
-          <span>${movie.duration || '-'}</span>
+        <h1>${esc(movie.title)}</h1>
+        <div class="chips">
+          ${movie.rating ? `<span class="chip star">${I.star}${esc(movie.rating)}</span>` : ''}
+          <span class="chip">${esc(movie.year || '-')}</span>
+          <span class="chip">${esc(movie.duration || '-')}</span>
         </div>
-        <p style="color: #ccc; line-height: 1.5; font-size: 14px;">
-          ${movie.synopsis || 'Tidak ada deskripsi.'}
-        </p>
+        <p class="syn">${esc(movie.synopsis || 'Belum ada sinopsis untuk film ini.')}</p>
       </div>
+    </section>
 
-      <div class="video-container" style="margin-top: 20px;">
-        <h3 style="margin-bottom: 10px; color: #e50914;">▶ MovieNyx Player</h3>
-        
-        <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; max-width: 100%; background: #000; border-radius: 8px;">
-          <iframe id="iframe-player" 
-                  src="${movie.primary_stream}" 
-                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0;" 
-                  allowfullscreen="true" 
-                  webkitallowfullscreen="true" 
-                  mozallowfullscreen="true" 
-                  scrolling="no">
-          </iframe>
-        </div>
-        
-        <div style="margin-top: 15px;">
-          <p style="font-size: 13px; color: #888; margin-bottom: 10px;">Ganti server kalau macet/error:</p>
-          <div style="display: flex; flex-wrap: wrap;">
-            ${serverButtons}
-          </div>
+    <section class="theater" aria-label="Pemutar film">
+      <div class="stage"><div class="screen" id="screen"></div></div>
+      <div class="floor">
+        <span class="lbl">Server</span>
+        ${servers.map((s, i) => `<button class="srv" data-i="${i}" aria-pressed="${i === 0}">${esc(s.name)}</button>`).join('')}
+        <div class="tools">
+          <a class="tool" id="openTab" target="_blank" rel="noopener">${I.ext}Buka di tab baru</a>
+          <button class="tool" id="dimBtn" aria-pressed="false">${I.moon}Mode bioskop</button>
         </div>
       </div>
-    </div>
-  `;
+    </section>`;
+
+  if (servers.length) {
+    setSource(servers[0].url);
+  } else {
+    $('#screen').innerHTML = '<div class="perr"><b>Sumber video belum tersedia</b><span>Film ini belum punya server pemutar.</span></div>';
+    $('#openTab').remove();
+  }
+
+  content.querySelector('.floor').addEventListener('click', (e) => {
+    const b = e.target.closest('.srv');
+    if (!b) return;
+    content.querySelectorAll('.srv').forEach((x) => x.setAttribute('aria-pressed', x === b));
+    setSource(servers[+b.dataset.i].url);
+  });
+
+  const dim = $('#dimBtn');
+  const toggle = (on) => {
+    document.body.classList.toggle('dim', on);
+    dim.setAttribute('aria-pressed', on);
+  };
+  dim.addEventListener('click', () => toggle(!document.body.classList.contains('dim')));
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && toggle(false));
 }
 
-// Eksekusi jalanin
 loadDetail();
