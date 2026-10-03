@@ -149,7 +149,12 @@ async function ensureGuest() {
   } catch (_) {
     guestJwt = raw.startsWith('ey') ? raw : null
   }
-  if (!guestJwt) throw new Error('guest bootstrap failed')
+  
+  // BAGIAN INI KITA UBAH BIAR KELIATAN ERROR ASLINYA
+  if (!guestJwt) {
+    throw new Error(`guest bootstrap failed. Server Status: ${r.status} | Pesan: ${r.body.slice(0, 150)}...`)
+  }
+  
   return guestJwt
 }
 
