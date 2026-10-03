@@ -1,8 +1,6 @@
 const content = $('#detail');
 const slugId = new URLSearchParams(location.search).get('id');
 
-const isDirect = (u) => /\.(mp4|webm|ogv)(\?|#|$)/i.test(u || '');
-
 function stateBox(title, msg) {
   content.innerHTML = `<div class="state"><h3>${esc(title)}</h3><p>${esc(msg)}</p><a class="btn red" href="index.html">Kembali ke beranda</a></div>`;
 }
@@ -20,7 +18,6 @@ async function loadDetail() {
   }
 }
 
-// Gabungkan stream utama + server cadangan tanpa duplikat
 function getServers(movie) {
   const list = [];
   if (movie.primary_stream) list.push({ name: 'Utama', url: movie.primary_stream });
@@ -30,41 +27,11 @@ function getServers(movie) {
   return list;
 }
 
-let safe = true; 
-let current = '';
-const SANDBOX = 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"';
-
-async function setSource(embedUrl) {
-  current = embedUrl;
+function setSource(url) {
   const screen = $('#screen');
-  
-  // Kasih animasi loading mumpung Puppeteer lagi kerja keras
-  screen.innerHTML = '<div class="perr"><b>Mengekstrak video...</b><span>Sabar lek, lagi ngebypass iklan (3-8 detik).</span></div>';
-  
-  try {
-    // Tembak API Puppeteer kita di Vercel (yang bakal nerusin ke VPS)
-    const extRes = await fetch(`/api/movie?action=extract&url=${encodeURIComponent(embedUrl)}`);
-    const extData = await extRes.json();
-
-    if (!extData.url) throw new Error(extData.error || 'Ekstraksi gagal');
-
-    // Kalau berhasil dapet link m3u8, pasang di tag video bersih
-    screen.innerHTML = `<video id="clean-player" controls playsinline style="width:100%; height:100%; background:#000; outline:none;"></video>`;
-    const video = document.getElementById('clean-player');
-    const streamUrl = extData.url;
-
-    if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = streamUrl;
-      video.play();
-    } else if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(streamUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-    }
-  } catch (err) {
-    screen.innerHTML = `<div class="perr"><b>Gagal menembus server ini</b><span>${err.message}. Coba ganti server di bawah.</span></div>`;
-  }
+  // Iframe murni tanpa sandbox biar server embed kaga ngeblokir koneksinya
+  screen.innerHTML = `<iframe src="${esc(url)}" title="Pemutar Movienyx" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen style="position: absolute; inset: 0; width: 100%; height: 100%; border: 0;"></iframe>`;
+  $('#openTab').href = url;
 }
 
 function renderDetail(movie) {
@@ -89,16 +56,18 @@ function renderDetail(movie) {
 
     <section class="theater" aria-label="Pemutar film">
       <div class="stage"><div class="screen" id="screen"></div></div>
-      <div class="floor">
+      <div class="floor" style="justify-content: flex-start;">
         <span class="lbl">Server</span>
         ${servers.map((s, i) => `<button class="srv" data-i="${i}" aria-pressed="${i === 0}">${esc(s.name)}</button>`).join('')}
-        <div class="tools">
-          <button class="tool" id="safeBtn" aria-pressed="true" title="Matikan kalau video tidak mau diputar">Blokir popup iklan</button>
+        <div class="tools" style="margin-left: auto;">
           <a class="tool" id="openTab" target="_blank" rel="noopener">${I.ext}Buka di tab baru</a>
           <button class="tool" id="dimBtn" aria-pressed="false">${I.moon}Mode bioskop</button>
         </div>
       </div>
-    </section>`;
+    </section>
+    <div style="text-align:center; padding: 10px; color: #888; font-size: 13px;">
+      💡 Tip: Nonton banyak iklan? Pakai browser Brave atau uBlock Origin.
+    </div>`;
 
   if (servers.length) {
     setSource(servers[0].url);
@@ -112,12 +81,6 @@ function renderDetail(movie) {
     if (!b) return;
     content.querySelectorAll('.srv').forEach((x) => x.setAttribute('aria-pressed', x === b));
     setSource(servers[+b.dataset.i].url);
-  });
-
-  $('#safeBtn').addEventListener('click', (e) => {
-    safe = !safe;
-    e.currentTarget.setAttribute('aria-pressed', safe);
-    if (current) setSource(current);
   });
 
   const dim = $('#dimBtn');
