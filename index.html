@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#100a0b">
+  <meta name="theme-color" content="#0e0809">
   <title>Movienyx Beta</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,18 +11,46 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <div id="dnsGate" class="dns-gate" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="dnsTitle">
+    <div class="dns-box">
+      <div class="dns-icon"><i data-lucide="shield-check" aria-hidden="true"></i></div>
+      <h2 id="dnsTitle">Pemberitahuan Keamanan</h2>
+      <p class="dns-desc">
+        Untuk memberikan pengalaman menonton terbaik yang terbebas dari iklan <i>pop-up</i> yang mengganggu serta melindungi perangkat Anda dari potensi risiko keamanan pihak ketiga, kami sangat menyarankan Anda untuk menggunakan <b>Private DNS</b> dari AdGuard sebelum melanjutkan.
+      </p>
+
+      <div class="dns-steps">
+        <strong>Panduan Pengaturan Cepat:</strong>
+        <ol>
+          <li>Buka menu <b>Pengaturan</b> (Settings) pada perangkat Anda.</li>
+          <li>Pilih menu <b>Koneksi</b> atau <b>Jaringan &amp; Internet</b>.</li>
+          <li>Cari dan pilih opsi <b>DNS Pribadi</b> (Private DNS).</li>
+          <li>Pilih <b>Nama host penyedia DNS Pribadi</b>, lalu ketik: <code class="dns-code">dns.adguard.com</code></li>
+          <li>Simpan pengaturan, lalu kembali ke halaman ini.</li>
+        </ol>
+      </div>
+
+      <div class="dns-actions">
+        <button id="btnDnsDone" class="btn red">Saya sudah setup DNS</button>
+        <button id="btnDnsSkip" class="btn ghost">Lewatkan setup DNS</button>
+      </div>
+    </div>
+  </div>
+
   <header class="nav" id="nav">
-    <a class="logo" href="index.html" aria-label="Movienyx, ke beranda"><span data-i="film"></span>Movienyx</a>
+    <a class="logo" href="index.html" aria-label="Movienyx, ke beranda"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Movienyx</span></a>
     <form class="search" id="searchForm" role="search">
-      <button type="submit" id="searchBtn" aria-label="Cari"><span data-i="search"></span></button>
+      <button type="submit" id="searchBtn" aria-label="Cari"><i data-lucide="search" aria-hidden="true"></i></button>
       <input id="searchInput" type="search" placeholder="Judul film atau series" autocomplete="off" aria-label="Cari film atau series">
     </form>
+    <a class="navlink" href="history.html" aria-label="Riwayat tontonan"><i data-lucide="history" aria-hidden="true"></i><span>Riwayat</span></a>
   </header>
 
   <main id="app" aria-live="polite"></main>
 
-  <footer>Movienyx Beta &middot; Nonton Movie Ternyaman Dan Bebas Iklan!</footer>
+  <footer>Movienyx Beta &middot; Nonton Movie Ternyaman Dan Teraman!</footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <script src="ui.js"></script>
   <script src="app.js"></script>
 </body>

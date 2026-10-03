@@ -1,26 +1,124 @@
-// Ikon SVG (pengganti emoji) + helper bersama untuk semua halaman
+// Helper bersama untuk semua halaman: ikon (Lucide via jsDelivr), riwayat tontonan, toast
 const $ = (s) => document.querySelector(s);
-const F = (d) => `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`;
-const S = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
+const ic = (name) => `<i data-lucide="${name}" aria-hidden="true"></i>`;
 const I = {
-  play: F('M7 4.5v15l13-7.5z'),
-  info: F('M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-6h2zm0-8h-2V7h2z'),
-  star: F('M12 2l3 6.9 7.5.7-5.7 4.9 1.7 7.3-6.5-3.9-6.5 3.9 1.7-7.3L1.5 9.6 9 8.9z'),
-  film: F('M4 3h16a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1zm1 2v2h2V5zm12 0v2h2V5zM5 9v2h2V9zm12 0v2h2V9zM5 13v2h2v-2zm12 0v2h2v-2zM5 17v2h2v-2zm12 0v2h2v-2zM9 5v14h6V5z'),
-  moon: F('M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z'),
-  search: S('M11 18a7 7 0 100-14 7 7 0 000 14zm10 3l-5-5'),
-  back: S('M15 5l-7 7 7 7'),
-  left: S('M15 5l-7 7 7 7'),
-  right: S('M9 5l7 7-7 7'),
-  ext: S('M14 4h6v6m0-6L10 14M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5'),
+  play: ic('play'),
+  info: ic('info'),
+  star: ic('star'),
+  left: ic('chevron-left'),
+  right: ic('chevron-right'),
+  ext: ic('external-link'),
+  moon: ic('moon'),
+  history: ic('history'),
+  trash: ic('trash-2'),
+  clock: ic('clock'),
+  resume: ic('play-circle'),
+  restart: ic('rotate-ccw'),
+  trend: ic('trending-up'),
 };
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // Poster cadangan kalau gambar gagal dimuat
-const NOPOSTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect width="200" height="300" fill="#1b1315"/><path d="M80 120v60l50-30z" fill="#4a3a3e"/></svg>');
+const NOPOSTER = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300"><rect width="200" height="300" fill="#1a1214"/><path d="M80 120v60l50-30z" fill="#4a3a3e"/></svg>');
 
-// Pasang ikon ke elemen bertanda data-i
-document.querySelectorAll('[data-i]').forEach((el) => (el.innerHTML = I[el.dataset.i]));
-window.addEventListener('scroll', () => $('#nav').classList.toggle('solid', scrollY > 24), { passive: true });
+/* ---------- Ikon ---------- */
+let paintQueued = false;
+function paintIcons() {
+  paintQueued = false;
+  if (window.lucide && document.querySelector('[data-lucide]')) window.lucide.createIcons();
+}
+new MutationObserver(() => {
+  if (paintQueued) return;
+  paintQueued = true;
+  requestAnimationFrame(paintIcons);
+}).observe(document.documentElement, { childList: true, subtree: true });
+window.addEventListener('DOMContentLoaded', paintIcons);
+
+/* ---------- Format waktu ---------- */
+function fmtTime(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const p = (n) => String(n).padStart(2, '0');
+  return h ? `${h}:${p(m)}:${p(s)}` : `${m}:${p(s)}`;
+}
+
+// Ubah teks durasi ("2h 15m", "1j 45m", "135 min", "1:45:00") menjadi detik
+function parseDuration(txt) {
+  if (!txt) return 0;
+  const t = String(txt).trim();
+  const clock = t.match(/^(\d+):(\d{2})(?::(\d{2}))?$/);
+  if (clock) return clock[3] ? +clock[1] * 3600 + +clock[2] * 60 + +clock[3] : +clock[1] * 60 + +clock[2];
+  const h = t.match(/(\d+)\s*(?:h|j|jam|hr|hour)/i);
+  const m = t.match(/(\d+)\s*(?:m|min|menit|minute)/i);
+  if (h || m) return (h ? +h[1] * 3600 : 0) + (m ? +m[1] * 60 : 0);
+  if (/^\d+$/.test(t)) return +t * 60;
+  return 0;
+}
+
+/* ---------- Riwayat tontonan (localStorage) ---------- */
+const Hist = {
+  key: 'movienyx_history',
+  all() {
+    try {
+      const v = JSON.parse(localStorage.getItem(this.key));
+      return Array.isArray(v) ? v : [];
+    } catch { return []; }
+  },
+  write(list) {
+    try { localStorage.setItem(this.key, JSON.stringify(list)); } catch { /* penyimpanan penuh / diblokir */ }
+  },
+  get(id) { return this.all().find((x) => x.id === id) || null; },
+  upsert(entry) {
+    const old = this.get(entry.id) || {};
+    const list = this.all().filter((x) => x.id !== entry.id);
+    list.unshift({ ...old, ...entry, updatedAt: Date.now() });
+    this.write(list.slice(0, 100));
+  },
+  remove(id) { this.write(this.all().filter((x) => x.id !== id)); },
+  clear() { this.write([]); },
+};
+const resumeLink = (x) => `detail.html?id=${encodeURIComponent(x.id)}&t=${Math.floor(x.watched || 0)}&s=${x.server || 0}`;
+
+/* ---------- Toast ---------- */
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.setAttribute('role', 'status');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.classList.add('out'), 3600);
+  setTimeout(() => el.remove(), 4100);
+}
+
+/* ---------- Navbar & gerbang DNS ---------- */
+window.addEventListener('scroll', () => $('#nav')?.classList.toggle('solid', scrollY > 24), { passive: true });
+
+function initDnsGate() {
+  const gate = document.getElementById('dnsGate');
+  if (!gate) return;
+
+  const expiryKey = 'movienyx_dns_expiry';
+  const savedExpiry = localStorage.getItem(expiryKey);
+  const now = Date.now();
+
+  if (savedExpiry && now < parseInt(savedExpiry, 10)) {
+    gate.style.display = 'none';
+    return;
+  }
+
+  gate.style.display = 'grid';
+  document.body.classList.add('locked');
+
+  const closeAndSetExpiry = () => {
+    localStorage.setItem(expiryKey, String(now + 3 * 24 * 60 * 60 * 1000));
+    gate.style.display = 'none';
+    document.body.classList.remove('locked');
+  };
+  document.getElementById('btnDnsDone')?.addEventListener('click', closeAndSetExpiry);
+  document.getElementById('btnDnsSkip')?.addEventListener('click', closeAndSetExpiry);
+}
+window.addEventListener('DOMContentLoaded', initDnsGate);

@@ -14,21 +14,41 @@ const card = (m) => `
     <div class="ov"><span class="pl">${I.play}</span><b>${esc(m.title)}</b><small>${rate(m)}<span>${esc(m.year || '-')}</span></small></div>
   </a>`;
 
-const row = (title, items, top) => `
-  <section class="sec${top ? ' top' : ''}">
-    <h2>${title}</h2>
+// Kartu "lanjutkan menonton": ada bar progres + posisi terakhir
+const histCard = (x) => {
+  const pct = x.total ? Math.min(100, Math.round((x.watched / x.total) * 100)) : 0;
+  return `
+  <a class="card" href="${resumeLink(x)}" aria-label="Lanjutkan ${esc(x.title)} dari ${fmtTime(x.watched)}">
+    ${img(x)}
+    <div class="ov"><span class="pl">${I.play}</span><b>${esc(x.title)}</b><small><span>${I.clock}Lanjut ${fmtTime(x.watched)}</span></small></div>
+    ${pct ? `<div class="prog"><i style="width:${pct}%"></i></div>` : ''}
+  </a>`;
+};
+
+const row = (title, itemsHtml, { top = false, extra = '', cls = '' } = {}) => `
+  <section class="sec${top ? ' top' : ''}${cls ? ' ' + cls : ''}">
+    <div class="sec-head"><h2>${title}</h2>${extra}</div>
     <div class="row">
       <button class="arrow l" aria-label="Geser kiri">${I.left}</button>
-      <div class="track">${items.map((m, i) => (top ? `<div class="tn"><i>${i + 1}</i>${card(m)}</div>` : card(m))).join('')}</div>
+      <div class="track">${itemsHtml}</div>
       <button class="arrow r" aria-label="Geser kanan">${I.right}</button>
     </div>
   </section>`;
+
+const continueRow = () => {
+  const list = Hist.all().filter((x) => !x.done).slice(0, 12);
+  if (!list.length) return '';
+  return row('Lanjutkan menonton', list.map(histCard).join(''), {
+    cls: 'cont',
+    extra: `<a class="more" href="history.html">Semua riwayat${I.right}</a>`,
+  });
+};
 
 const hero = (m) => `
   <section class="hero">
     <div class="bd" style="background-image:url('${esc(m.poster || '')}')"></div>
     <div class="hc">
-      <span class="rank-tag">No. 1 hari ini</span>
+      <span class="rank-tag">${I.trend}No. 1 hari ini</span>
       <h1>${esc(m.title)}</h1>
       <div class="meta">${rate(m)}<span>${esc(m.year || '-')}</span></div>
       <div class="btns">
@@ -59,10 +79,12 @@ function renderHome(list) {
     return;
   }
   const rest = list.slice(10);
+  const top = list.slice(0, 10).map((m, i) => `<div class="tn"><i>${i + 1}</i>${card(m)}</div>`).join('');
   app.innerHTML =
     hero(list[0]) +
-    row('Top 10 hari ini', list.slice(0, 10), true) +
-    (rest.length ? `<section class="sec"><h2>Jelajahi</h2><div class="grid">${rest.map(card).join('')}</div></section>` : '');
+    continueRow() +
+    row('Top 10 hari ini', top, { top: true }) +
+    (rest.length ? `<section class="sec"><div class="sec-head"><h2>Jelajahi</h2></div><div class="grid">${rest.map(card).join('')}</div></section>` : '');
 }
 
 async function loadHome() {
@@ -85,7 +107,7 @@ async function search(q) {
   const my = ++token;
   retry = () => search(q);
   scrollTo(0, 0);
-  app.innerHTML = `<section class="sec res"><h2>Mencari “${esc(q)}”</h2><div class="grid">${'<div class="card sk"></div>'.repeat(10)}</div></section>`;
+  app.innerHTML = `<section class="sec res"><div class="sec-head"><h2>Mencari “${esc(q)}”</h2></div><div class="grid">${'<div class="card sk"></div>'.repeat(10)}</div></section>`;
   try {
     const d = await api(`action=search&keyword=${encodeURIComponent(q)}`);
     if (my !== token) return;
@@ -94,7 +116,7 @@ async function search(q) {
       stateBox(`Tidak ada hasil untuk “${q}”`, 'Coba kata kunci lain atau periksa ejaan judulnya.', '<button class="btn red" data-home>Kembali ke beranda</button>');
       return;
     }
-    app.innerHTML = `<section class="sec res"><h2>Hasil untuk “${esc(q)}”</h2><div class="grid">${list.map(card).join('')}</div></section>`;
+    app.innerHTML = `<section class="sec res"><div class="sec-head"><h2>Hasil untuk “${esc(q)}”</h2><span class="count">${list.length} judul</span></div><div class="grid">${list.map(card).join('')}</div></section>`;
   } catch (err) {
     if (my !== token) return;
     stateBox('Pencarian gagal', err.message, '<button class="btn red" data-retry>Coba lagi</button>');
@@ -118,7 +140,7 @@ input.addEventListener('keydown', (e) => {
 
 // Tekan "/" untuk langsung mengetik pencarian
 document.addEventListener('keydown', (e) => {
-  if (e.key === '/' && document.activeElement !== input) {
+  if (e.key === '/' && document.activeElement !== input && !e.target.closest('input,textarea')) {
     e.preventDefault();
     input.focus();
   }
@@ -135,6 +157,11 @@ app.addEventListener('click', (e) => {
     input.value = '';
     loadHome();
   }
+});
+
+// Kembali dari halaman detail (bfcache) → segarkan baris "Lanjutkan menonton"
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted && !input.value.trim()) loadHome();
 });
 
 loadHome();
