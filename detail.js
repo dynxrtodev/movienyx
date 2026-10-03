@@ -1,15 +1,13 @@
 const content = $('#detail');
 const qs = new URLSearchParams(location.search);
 const slugId = qs.get('id');
-const resumeAt = Math.max(0, parseInt(qs.get('t'), 10) || 0); // dari halaman riwayat
+const resumeAt = Math.max(0, parseInt(qs.get('t'), 10) || 0); 
 const startServer = Math.max(0, parseInt(qs.get('s'), 10) || 0);
 
 let movie = null;
 let servers = [];
 let cur = 0;
 
-// Status pemutaran. Pemutar embed ada di domain lain, jadi posisi video
-// dihitung dari lama menonton, dan dikoreksi otomatis kalau pemutarnya mengirim waktu via postMessage.
 const P = { watched: 0, total: 0, loaded: false, synced: false, paused: false, hold: 0 };
 
 function stateBox(title, msg) {
@@ -39,7 +37,6 @@ function getServers(m) {
   return list;
 }
 
-// Tambahkan penanda waktu mulai; banyak pemutar embed membaca ?t= atau ?start=
 function withStart(url, sec) {
   if (!sec || sec < 1) return url;
   try {
@@ -53,11 +50,13 @@ function withStart(url, sec) {
 function setSource(i, at = 0) {
   cur = i;
   const url = withStart(servers[i].url, at);
-  P.loaded = false;
+  
+  // Langsung set true agar timer berjalan. Iframe embed kadang memblokir event onload
+  P.loaded = true; 
   P.synced = false;
   P.paused = false;
+  
   $('#screen').innerHTML = `<iframe src="${esc(url)}" title="Pemutar Movienyx" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen></iframe>`;
-  $('#screen iframe').addEventListener('load', () => (P.loaded = true));
   $('#openTab').href = url;
 }
 
@@ -67,7 +66,10 @@ function persist() {
   const total = P.total || parseDuration(movie.duration);
   let w = Math.floor(P.watched);
   if (total && w > total) w = total;
-  if (w < 10 || w < P.hold) return; // abaikan sekilas buka & jangan timpa posisi lama sebelum user memilih
+  
+  // Ubah batas tes jadi 3 detik agar riwayat lebih responsif terbaca
+  if (w < 3 || w < P.hold) return; 
+  
   const done = total ? w >= total * 0.95 : false;
   Hist.upsert({
     id: slugId,
@@ -87,10 +89,15 @@ setInterval(() => {
   if (P.loaded && !document.hidden && !P.synced && !P.paused) P.watched += 1;
   if (++ticks % 5 === 0) persist();
 }, 1000);
+
 document.addEventListener('visibilitychange', () => document.hidden && persist());
 window.addEventListener('pagehide', persist);
 
-// Kalau pemutar mengirim waktu sebenarnya, pakai itu
+// Paksa simpan data saat user menekan tombol kembali atau logo navigasi
+document.querySelectorAll('.back, .logo, .navlink').forEach(el => {
+  el.addEventListener('click', persist);
+});
+
 window.addEventListener('message', (e) => {
   const frame = $('#screen iframe');
   if (!frame || e.source !== frame.contentWindow) return;
@@ -118,7 +125,9 @@ function renderDetail(m) {
   servers = getServers(m);
   const poster = esc(m.poster || NOPOSTER);
   const saved = Hist.get(slugId);
-  const offer = !resumeAt && saved && !saved.done && saved.watched >= 30 ? saved : null;
+  
+  // Ubah batas munculnya prompt resume menjadi 5 detik
+  const offer = !resumeAt && saved && !saved.done && saved.watched >= 5 ? saved : null;
 
   content.innerHTML = `
     <section class="dh">
@@ -174,6 +183,7 @@ function renderDetail(m) {
     $('#resume').remove();
     showResumed(offer.watched);
   });
+  
   $('#resumeNo')?.addEventListener('click', () => {
     P.hold = 0;
     P.watched = 0;
@@ -186,7 +196,7 @@ function renderDetail(m) {
     if (!b) return;
     content.querySelectorAll('.srv').forEach((x) => x.setAttribute('aria-pressed', x === b));
     persist();
-    setSource(+b.dataset.i, Math.floor(P.watched)); // lanjut dari posisi terakhir di server baru
+    setSource(+b.dataset.i, Math.floor(P.watched));
   });
 
   const dim = $('#dimBtn');
