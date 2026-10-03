@@ -30,10 +30,8 @@ function renderMovies(data) {
       </div>
     `;
     
-    // Nanti ini kita arahin ke halaman detail
     card.addEventListener('click', () => {
-      console.log(`Lu ngeklik ID: ${movie.subjectId}`);
-      alert(`Otw buka detail film: ${movie.title}`);
+      window.location.href = `detail.html?id=${movie.subjectId}`;
     });
     
     grid.appendChild(card);
