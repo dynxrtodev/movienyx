@@ -28,11 +28,15 @@ async function loadDetailAndPlay() {
 }
 
 function renderDetail(movie, playData) {
-  // Ekstrak URL HLS (.m3u8) dari balikan API Play
-  const hlsUrl = playData.playHls || (playData.streams && playData.streams[0] && playData.streams[0].hls);
+  // Ambil URL HLS asli dan Cookie-nya
+  const rawHls = playData.playHls || (playData.streams && playData.streams[0] && playData.streams[0].hls);
+  const cookieHeader = (playData.streams && playData.streams[0] && playData.streams[0].cookieHeader) || '';
   
   // Format durasi (detik ke menit)
   const duration = movie.duration ? Math.floor(movie.duration / 60) + ' Menit' : '-';
+
+  // Rakit URL Proxy yang nembak ke VPS lu
+  const proxyHlsUrl = `http://176.112.152.131:3050/proxy?url=${encodeURIComponent(rawHls)}&cookie=${encodeURIComponent(cookieHeader)}`;
 
   content.innerHTML = `
     <div class="detail-wrapper">
@@ -52,17 +56,14 @@ function renderDetail(movie, playData) {
       </div>
 
       <div class="video-container">
-        <h3 style="margin-bottom: 10px; color: #e50914;">▶ Player (Eksperimental)</h3>
+        <h3 style="margin-bottom: 10px; color: #e50914;">▶ Player (Jalur VPS Proxy)</h3>
         <video id="player" controls playsinline></video>
-        <p style="font-size: 12px; color: #888; margin-top: 10px;">
-          Kalau error diputar, server nge-blokir karena butuh header Cookie CDN.
-        </p>
       </div>
     </div>
   `;
 
-  // Setup HLS.js buat videonya
-  setupPlayer(hlsUrl);
+  // Tembak URL Proxy ke HLS.js
+  setupPlayer(proxyHlsUrl);
 }
 
 function setupPlayer(streamUrl) {
