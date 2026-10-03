@@ -15,23 +15,24 @@ function renderMovies(data) {
     const card = document.createElement('div');
     card.className = 'card';
     
-    const year = movie.releaseDate ? movie.releaseDate.substring(0, 4) : '-';
-    // Cover kadang ada di property 'cover', kadang 'cover.url' tergantung balikan API
-    const coverUrl = typeof movie.cover === 'string' ? movie.cover : (movie.cover?.url || '');
+    // Key di API Moviezone pake 'year' dan 'poster'
+    const year = movie.year ? movie.year : '-';
+    const coverUrl = movie.poster || '';
     
     card.innerHTML = `
       <img src="${coverUrl}" alt="${movie.title}" loading="lazy">
       <div class="info">
         <div class="title">${movie.title}</div>
         <div class="meta">
-          <span>⭐ ${movie.imdb || 'N/A'}</span>
+          <span>⭐ ${movie.rating || 'N/A'}</span>
           <span>${year}</span>
         </div>
       </div>
     `;
     
+    // API Moviezone pake 'slug' buat ngebuka detailnya, bukan subjectId angka
     card.addEventListener('click', () => {
-      window.location.href = `detail.html?id=${movie.subjectId}`;
+      window.location.href = `detail.html?id=${movie.slug}`;
     });
     
     grid.appendChild(card);
@@ -42,9 +43,10 @@ function renderMovies(data) {
 async function loadTrending() {
   grid.innerHTML = '<p style="text-align:center; grid-column: 1 / -1;">Lagi nyedot data trending...</p>';
   try {
+    // Tembak ke /api/movie biar Vercel yang nerusin ke Pterodactyl (Anti HTTPS Error)
     const response = await fetch('/api/movie?action=trending');
     const data = await response.json();
-    renderMovies(data);
+    renderMovies(data.results || data);
   } catch (err) {
     grid.innerHTML = `<p style="color:red; text-align:center; grid-column: 1 / -1;">Error: ${err.message}</p>`;
   }
@@ -56,7 +58,6 @@ async function searchMovies(keyword) {
   try {
     const response = await fetch(`/api/movie?action=search&keyword=${encodeURIComponent(keyword)}`);
     const result = await response.json();
-    // Berdasarkan script baru lu, balikan search ada di result.results
     renderMovies(result.results || []); 
   } catch (err) {
     grid.innerHTML = `<p style="color:red; text-align:center; grid-column: 1 / -1;">Error: ${err.message}</p>`;
