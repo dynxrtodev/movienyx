@@ -107,8 +107,14 @@ function httpPost(url, headers, body) {
   })
 }
 
+// Bikin fungsi kecil buat ngacak IP Indihome/Telkomsel (114.124.x.x)
+function getRandomIndoIP() {
+  return `114.124.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+}
+
 async function mobileGet(path) {
   const url = MOBILE + path
+  const fakeIp = getRandomIndoIP();
   const headers = {
     'User-Agent': UA_MOB,
     Accept: 'application/json',
@@ -117,7 +123,10 @@ async function mobileGet(path) {
     'X-Client-Token': clientToken(),
     'X-Client-Info': clientInfo(),
     'X-Client-Status': '0',
-    'x-tr-signature': trSignature('GET', url)
+    'x-tr-signature': trSignature('GET', url),
+    // Suntikan IP Palsu
+    'X-Forwarded-For': fakeIp,
+    'X-Real-IP': fakeIp
   }
   if (guestJwt) headers.Authorization = 'Bearer ' + guestJwt
   return httpGet(url, headers)
@@ -126,6 +135,7 @@ async function mobileGet(path) {
 async function mobilePost(path, bodyObj) {
   const url = MOBILE + path
   const body = JSON.stringify(bodyObj || {})
+  const fakeIp = getRandomIndoIP();
   const headers = {
     'User-Agent': UA_MOB,
     Accept: 'application/json',
@@ -134,7 +144,10 @@ async function mobilePost(path, bodyObj) {
     'X-Client-Token': clientToken(),
     'X-Client-Info': clientInfo(),
     'X-Client-Status': '0',
-    'x-tr-signature': trSignature('POST', url, body)
+    'x-tr-signature': trSignature('POST', url, body),
+    // Suntikan IP Palsu
+    'X-Forwarded-For': fakeIp,
+    'X-Real-IP': fakeIp
   }
   if (guestJwt) headers.Authorization = 'Bearer ' + guestJwt
   return httpPost(url, headers, body)
