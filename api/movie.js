@@ -1,8 +1,5 @@
 const crypto = require('crypto')
 const { URL } = require('url')
-// Impor fetch dari omnify-bypass pengganti module 'https' bawaan
-const { fetch } = require('omnify-bypass')
-
 const H5 = 'https://h5-api.aoneroom.com/wefeed-h5api-bff'
 const MOBILE = 'https://api3.aoneroom.com'
 const HOST = 'officialmoviebox.com'
@@ -61,51 +58,56 @@ function trSignature(method, fullUrl, body) {
   return ts + '|2|' + dig
 }
 
-// === FUNGSI HTTP MENGGUNAKAN OMNIFY-BYPASS ===
-
-async function httpGet(url, headers) {
-  try {
-    // omnify-bypass mendukung exponential backoff otomatis dengan parameter retries[span_3](start_span)[span_3](end_span)
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: headers,
-      retries: 3, 
-      retryDelay: 1000
-    });
-    const body = await res.text();
-    
-    // Rekonstruksi struktur kembalian agar kompatibel dengan sisa script lu
-    const responseHeaders = {};
-    res.headers.forEach((value, name) => {
-      responseHeaders[name.toLowerCase()] = value;
-    });
-
-    return { status: res.status, headers: responseHeaders, body: body };
-  } catch (error) {
-    throw new Error('omnify GET timeout/error: ' + error.message);
-  }
+async function mobileGet(path) {
+  // 1. URL asli untuk keperluan enkripsi Signature
+  const originalUrl = MOBILE + path;
+  
+  // 2. URL API Bypass berbayar lu
+  const bypassUrl = 'https://api.jerexd.my.id/api/tools/cfwaf?apikey=seven-api&mode=waf&url=' + encodeURIComponent(originalUrl);
+  
+  const headers = {
+    'User-Agent': UA_MOB,
+    Accept: 'application/json',
+    'Content-Type': 'application/json;charset=UTF-8',
+    'X-M-Version': '4.0.02',
+    'X-Client-Token': clientToken(),
+    'X-Client-Info': clientInfo(),
+    'X-Client-Status': '0',
+    // CRITICAL: Signature harus tetap dienkripsi pakai originalUrl
+    'x-tr-signature': trSignature('GET', originalUrl)
+  };
+  
+  if (guestJwt) headers.Authorization = 'Bearer ' + guestJwt;
+  
+  // 3. Tembak HTTP GET ke Bypass URL
+  return httpGet(bypassUrl, headers);
 }
 
-async function httpPost(url, headers, payloadStr) {
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: headers,
-      body: payloadStr,
-      retries: 3,
-      retryDelay: 1000
-    });
-    const body = await res.text();
-    
-    const responseHeaders = {};
-    res.headers.forEach((value, name) => {
-      responseHeaders[name.toLowerCase()] = value;
-    });
-
-    return { status: res.status, headers: responseHeaders, body: body };
-  } catch (error) {
-    throw new Error('omnify POST timeout/error: ' + error.message);
-  }
+async function mobilePost(path, bodyObj) {
+  // 1. URL asli untuk keperluan enkripsi Signature
+  const originalUrl = MOBILE + path;
+  
+  // 2. URL API Bypass berbayar lu
+  const bypassUrl = 'https://api.jerexd.my.id/api/tools/cfwaf?apikey=seven-api&mode=waf&url=' + encodeURIComponent(originalUrl);
+  
+  const body = JSON.stringify(bodyObj || {});
+  
+  const headers = {
+    'User-Agent': UA_MOB,
+    Accept: 'application/json',
+    'Content-Type': 'application/json;charset=UTF-8',
+    'X-M-Version': '4.0.02',
+    'X-Client-Token': clientToken(),
+    'X-Client-Info': clientInfo(),
+    'X-Client-Status': '0',
+    // CRITICAL: Signature harus tetap dienkripsi pakai originalUrl
+    'x-tr-signature': trSignature('POST', originalUrl, body)
+  };
+  
+  if (guestJwt) headers.Authorization = 'Bearer ' + guestJwt;
+  
+  // 3. Tembak HTTP POST ke Bypass URL
+  return httpPost(bypassUrl, headers, body);
 }
 
 function getRandomIndoIP() {
