@@ -215,4 +215,22 @@ function showResumed(sec) {
   toast(`Melanjutkan dari ${fmtTime(sec)}`);
 }
 
+let blurTime = 0;
+
+window.addEventListener('blur', () => {
+  blurTime = Date.now();
+  setTimeout(() => {
+    window.focus();
+  }, 100);
+});
+
+window.addEventListener('focus', () => {
+  if (blurTime === 0) return;
+  const awayTime = Date.now() - blurTime;
+  if (awayTime < 15000) {
+    toast('Pop-up iklan terdeteksi. Silakan tutup tab yang baru terbuka untuk melanjutkan.');
+  }
+  blurTime = 0;
+});
+
 loadDetail();
