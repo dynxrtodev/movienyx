@@ -30,23 +30,40 @@ function getServers(movie) {
   return list;
 }
 
-let safe = true; // blokir popup & redirect dari iframe pemutar
+let safe = true; 
 let current = '';
-// Tanpa allow-popups dan allow-top-navigation, iframe tidak bisa membuka tab baru atau mengalihkan halaman ini
 const SANDBOX = 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"';
 
-function setSource(url) {
-  current = url;
+async function setSource(embedUrl) {
+  current = embedUrl;
   const screen = $('#screen');
-  screen.innerHTML = isDirect(url)
-    ? `<video controls playsinline preload="metadata" src="${esc(url)}"></video>`
-    : `<iframe src="${esc(url)}" title="Pemutar Movienyx" ${safe ? SANDBOX : ''} allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen></iframe>`;
-  $('#openTab').href = url;
-  const v = screen.querySelector('video');
-  if (v) {
-    v.addEventListener('error', () => {
-      screen.insertAdjacentHTML('beforeend', '<div class="perr"><b>Video tidak bisa diputar di server ini</b><span>Coba server lain di bawah layar.</span></div>');
-    });
+  
+  // Kasih animasi loading mumpung Puppeteer lagi kerja keras
+  screen.innerHTML = '<div class="perr"><b>Mengekstrak video...</b><span>Sabar lek, lagi ngebypass iklan (3-8 detik).</span></div>';
+  
+  try {
+    // Tembak API Puppeteer kita di Vercel (yang bakal nerusin ke VPS)
+    const extRes = await fetch(`/api/movie?action=extract&url=${encodeURIComponent(embedUrl)}`);
+    const extData = await extRes.json();
+
+    if (!extData.url) throw new Error(extData.error || 'Ekstraksi gagal');
+
+    // Kalau berhasil dapet link m3u8, pasang di tag video bersih
+    screen.innerHTML = `<video id="clean-player" controls playsinline style="width:100%; height:100%; background:#000; outline:none;"></video>`;
+    const video = document.getElementById('clean-player');
+    const streamUrl = extData.url;
+
+    if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = streamUrl;
+      video.play();
+    } else if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(streamUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
+    }
+  } catch (err) {
+    screen.innerHTML = `<div class="perr"><b>Gagal menembus server ini</b><span>${err.message}. Coba ganti server di bawah.</span></div>`;
   }
 }
 
