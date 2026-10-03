@@ -30,11 +30,17 @@ function getServers(movie) {
   return list;
 }
 
+let safe = true; // blokir popup & redirect dari iframe pemutar
+let current = '';
+// Tanpa allow-popups dan allow-top-navigation, iframe tidak bisa membuka tab baru atau mengalihkan halaman ini
+const SANDBOX = 'sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"';
+
 function setSource(url) {
+  current = url;
   const screen = $('#screen');
   screen.innerHTML = isDirect(url)
     ? `<video controls playsinline preload="metadata" src="${esc(url)}"></video>`
-    : `<iframe src="${esc(url)}" title="Pemutar Movienyx" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen></iframe>`;
+    : `<iframe src="${esc(url)}" title="Pemutar Movienyx" ${safe ? SANDBOX : ''} allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen></iframe>`;
   $('#openTab').href = url;
   const v = screen.querySelector('video');
   if (v) {
@@ -70,6 +76,7 @@ function renderDetail(movie) {
         <span class="lbl">Server</span>
         ${servers.map((s, i) => `<button class="srv" data-i="${i}" aria-pressed="${i === 0}">${esc(s.name)}</button>`).join('')}
         <div class="tools">
+          <button class="tool" id="safeBtn" aria-pressed="true" title="Matikan kalau video tidak mau diputar">Blokir popup iklan</button>
           <a class="tool" id="openTab" target="_blank" rel="noopener">${I.ext}Buka di tab baru</a>
           <button class="tool" id="dimBtn" aria-pressed="false">${I.moon}Mode bioskop</button>
         </div>
@@ -88,6 +95,12 @@ function renderDetail(movie) {
     if (!b) return;
     content.querySelectorAll('.srv').forEach((x) => x.setAttribute('aria-pressed', x === b));
     setSource(servers[+b.dataset.i].url);
+  });
+
+  $('#safeBtn').addEventListener('click', (e) => {
+    safe = !safe;
+    e.currentTarget.setAttribute('aria-pressed', safe);
+    if (current) setSource(current);
   });
 
   const dim = $('#dimBtn');
