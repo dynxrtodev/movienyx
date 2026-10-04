@@ -69,6 +69,7 @@ const hero = (m) => {
       ${syn ? `<p class="hsyn">${esc(syn)}</p>` : ''}
       <div class="btns">
         <a class="btn" href="${link(m)}">${I.play}Tonton Sekarang</a>
+        <a class="btn ghost" href="${link(m)}">${I.info}Selengkapnya</a>
       </div>
     </div>
   </section>`;

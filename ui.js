@@ -164,7 +164,35 @@ function hideSplash() {
   setTimeout(() => {
     el.classList.add('out');
     try { sessionStorage.setItem('mn_splash', '1'); } catch { /* diabaikan */ }
-    setTimeout(() => el.remove(), 600);
-  }, Math.max(0, 900 - (Date.now() - splashStart)));
+    setTimeout(() => el.remove(), 1500);
+  }, Math.max(0, 1700 - (Date.now() - splashStart)));
 }
 setTimeout(hideSplash, 6000);
+
+
+/* ---------- Interaksi: tilt kartu & transisi halaman ---------- */
+if (matchMedia('(hover:hover)').matches && !matchMedia('(prefers-reduced-motion:reduce)').matches) {
+  document.addEventListener('pointermove', (e) => {
+    const c = e.target.closest?.('.card:not(.sk)');
+    if (!c) return;
+    const r = c.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+    c.style.setProperty('--rx', ((x - 0.5) * 10).toFixed(2) + 'deg');
+    c.style.setProperty('--ry', ((0.5 - y) * 10).toFixed(2) + 'deg');
+    c.style.setProperty('--mx', (x * 100).toFixed(1) + '%');
+    c.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+  }, { passive: true });
+  document.addEventListener('pointerout', (e) => {
+    const c = e.target.closest?.('.card');
+    if (c && !c.contains(e.relatedTarget)) { c.style.removeProperty('--rx'); c.style.removeProperty('--ry'); }
+  });
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]');
+  if (!a || e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || a.target === '_blank' || a.origin !== location.origin) return;
+  if (a.pathname === location.pathname && a.search === location.search) return;
+  e.preventDefault();
+  document.body.classList.add('leaving');
+  setTimeout(() => { location.href = a.href; }, 260);
+});
+window.addEventListener('pageshow', () => document.body.classList.remove('leaving'));

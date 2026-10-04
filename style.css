@@ -1,4 +1,4 @@
-:root{--bg:#141414;--panel:#1f1f1f;--panel2:#2b2b2b;--line:#ffffff1f;--red:#e50914;--red-hi:#f6121d;--text:#fff;--mute:#b3b3b3;--r:6px;--pad:clamp(16px,4vw,56px);--disp:"Bebas Neue",Impact,sans-serif;--ease:cubic-bezier(.2,.7,.2,1)}
+:root{--bg:#0b0809;--panel:#161112;--panel2:#221a1c;--line:#ffffff1f;--red:#e50914;--red-hi:#f6121d;--text:#fff;--mute:#b3b3b3;--r:6px;--pad:clamp(16px,4vw,56px);--disp:"Bebas Neue",Impact,sans-serif;--ease:cubic-bezier(.2,.7,.2,1)}
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font:400 15px/1.5 "DM Sans",system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
@@ -32,7 +32,7 @@ i[data-lucide]{display:inline-block;width:1em;height:1em}
 
 /* Navbar */
 .nav{position:fixed;inset:0 0 auto;z-index:30;display:flex;align-items:center;gap:14px;padding:14px var(--pad);background:linear-gradient(#000c,transparent);transition:background .3s,box-shadow .3s}
-.nav.solid{background:#141414f2;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 1px 0 var(--line)}
+.nav.solid{background:#0b0809f2;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 1px 0 var(--line)}
 .logo{font:400 32px/1 var(--disp);letter-spacing:.08em;text-transform:uppercase;color:var(--red);transition:opacity .2s}
 .logo:hover{opacity:.85}
 .back{display:grid;place-items:center;font-size:22px;width:38px;height:38px;border-radius:50%;transition:background .2s}
@@ -50,7 +50,7 @@ i[data-lucide]{display:inline-block;width:1em;height:1em}
 @media(max-width:560px){.navlink span{display:none}.navlink{padding:9px 10px}.search:focus-within input,.search input:not(:placeholder-shown){width:min(46vw,200px)}.logo{font-size:28px}}
 
 /* Dock navigasi bawah */
-.dock{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));translate:-50% 0;z-index:35;display:grid;grid-template-columns:1fr 1fr;width:min(calc(100vw - 32px),360px);padding:5px;border-radius:999px;background:#141414b8;backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--line);box-shadow:0 12px 40px #000a}
+.dock{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));translate:-50% 0;z-index:35;display:grid;grid-template-columns:1fr 1fr;width:min(calc(100vw - 32px),360px);padding:5px;border-radius:999px;background:#0b0809b8;backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--line);box-shadow:0 12px 40px #000a}
 .dock-ind{position:absolute;top:5px;bottom:5px;left:5px;width:calc(50% - 5px);border-radius:999px;background:#fff;transition:transform .45s var(--ease)}
 .dock[data-active=anime] .dock-ind{transform:translateX(100%)}
 .cat-btn{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 0;border-radius:999px;font-weight:700;font-size:14px;color:var(--mute);transition:color .3s,transform .2s var(--ease)}
@@ -76,7 +76,7 @@ i[data-lucide]{display:inline-block;width:1em;height:1em}
 
 /* Hero (gambar tajam, tanpa blur) */
 .hero{position:relative;isolation:isolate;min-height:min(86vh,760px);display:flex;align-items:flex-end;padding:120px var(--pad) 80px;margin-bottom:-48px;overflow:hidden;background:radial-gradient(ellipse 70% 60% at 80% 30%,#3a0a0e66,transparent 70%)}
-.hero::before,.dh::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,var(--bg) 6%,#14141499 42%,transparent 80%),linear-gradient(0deg,var(--bg) 2%,transparent 42%),linear-gradient(180deg,#0009,transparent 24%)}
+.hero::before,.dh::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,var(--bg) 6%,#0b080999 42%,transparent 80%),linear-gradient(0deg,var(--bg) 2%,transparent 42%),linear-gradient(180deg,#0009,transparent 24%)}
 .hm{position:absolute;inset:0;z-index:-2}
 .hm img{opacity:0;transform:scale(1.04);transition:opacity .9s,transform 1.6s var(--ease)}
 .hm img.ld{opacity:1;transform:none}
@@ -103,8 +103,8 @@ i[data-lucide]{display:inline-block;width:1em;height:1em}
 .track{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;padding:18px var(--pad) 28px;margin:0 calc(var(--pad)*-1);scroll-padding-left:var(--pad)}
 .track::-webkit-scrollbar{display:none}
 .arrow{position:absolute;top:18px;bottom:28px;width:var(--pad);min-width:48px;z-index:5;display:grid;place-items:center;font-size:32px;opacity:0;transition:opacity .25s,background .25s}
-.arrow.l{left:calc(var(--pad)*-1);background:linear-gradient(90deg,#141414f2,transparent)}
-.arrow.r{right:calc(var(--pad)*-1);background:linear-gradient(270deg,#141414f2,transparent)}
+.arrow.l{left:calc(var(--pad)*-1);background:linear-gradient(90deg,#0b0809f2,transparent)}
+.arrow.r{right:calc(var(--pad)*-1);background:linear-gradient(270deg,#0b0809f2,transparent)}
 .row:hover .arrow,.arrow:focus-visible{opacity:1}
 .arrow:hover svg{transform:scale(1.25)}
 .arrow svg{transition:transform .2s var(--ease)}
@@ -226,7 +226,7 @@ body.dim::after{opacity:1}
 .toast.out{opacity:0;transform:translateY(8px)}
 
 /* Gerbang DNS */
-.dns-gate{position:fixed;inset:0;z-index:99999;background:#141414f2;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:grid;place-items:center;padding:var(--pad);overflow-y:auto}
+.dns-gate{position:fixed;inset:0;z-index:99999;background:#0b0809f2;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:grid;place-items:center;padding:var(--pad);overflow-y:auto}
 .dns-box{background:var(--panel);border:1px solid var(--line);padding:35px 30px;border-radius:12px;max-width:550px;text-align:center;box-shadow:0 24px 60px #000e;animation:rise .4s ease-out}
 .dns-icon{display:grid;place-items:center;width:64px;height:64px;margin:0 auto 14px;border-radius:50%;background:#e509141f;border:1px solid #e5091466;color:var(--red);font-size:30px}
 .dns-box h2{font-family:var(--disp);font-size:34px;font-weight:400;letter-spacing:1px;margin-bottom:12px}
@@ -239,3 +239,83 @@ body.dim::after{opacity:1}
 @media(min-width:480px){.dns-actions{flex-direction:row;justify-content:center}}
 
 @media(prefers-reduced-motion:reduce){*,::before,::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ===== Upgrade bioskop ===== */
+:root{--gold:#e6b85c;--ivory:#f4ecdb}
+body{background:radial-gradient(ellipse 90% 50% at 50% -10%,#3a0a0e55,transparent 70%) fixed,var(--bg);animation:fadeIn .6s var(--ease)}
+body::before{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.07;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+body.leaving{opacity:0;transition:opacity .26s}
+
+/* Splash: tirai bioskop terbuka */
+#splash{opacity:1;transition:background 0s .8s,visibility 0s 1.5s}
+#splash.out{opacity:1;visibility:hidden;background:transparent;pointer-events:none}
+.sp-curtain{position:absolute;top:0;bottom:0;width:50.5%;background:repeating-linear-gradient(90deg,#4d070c 0,#931520 30px,#4d070c 60px);transition:transform 1.3s cubic-bezier(.7,0,.2,1)}
+.sp-curtain.l{left:0;box-shadow:inset -3px 0 0 var(--gold),12px 0 40px #000a}
+.sp-curtain.r{right:0;box-shadow:inset 3px 0 0 var(--gold),-12px 0 40px #000a}
+#splash.out .l{transform:translateX(-102%)}
+#splash.out .r{transform:translateX(102%)}
+.sp-logo{z-index:2;color:var(--ivory);text-shadow:0 0 44px #e6b85c80}
+.sp-logo::after{background:var(--gold)}
+#splash.out .sp-logo{animation:spOut .6s forwards}
+@keyframes spOut{to{opacity:0;transform:scale(1.25);filter:blur(6px)}}
+.sp-load{position:absolute;z-index:2;bottom:18vh;left:50%;translate:-50% 0;width:min(220px,50vw);height:2px;background:#fff2;overflow:hidden}
+.sp-load i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--gold));transform-origin:left;animation:spLoad 1.8s var(--ease) infinite}
+@keyframes spLoad{0%{transform:scaleX(0)}75%{transform:scaleX(1)}100%{transform:scaleX(1);opacity:0}}
+#topbar{background:linear-gradient(90deg,var(--red),var(--gold));box-shadow:0 0 14px #e50914aa}
+.sk{background:linear-gradient(100deg,var(--panel) 30%,#2a2022 50%,var(--panel) 70%);background-size:300% 100%}
+
+/* Navbar & tombol */
+.logo{text-shadow:0 0 28px #e5091466}
+.nav.solid{background:#0b0809e6}
+.btn{position:relative;overflow:hidden}
+.btn::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 35%,#ffffff55 50%,transparent 65%);translate:-120% 0;transition:translate .7s var(--ease)}
+.btn:hover::after{translate:120% 0}
+.btn.red{box-shadow:0 8px 24px #e5091455}
+.dock-ind{background:var(--ivory)}
+.cat-btn.active,.cat-btn.active:hover{color:#1a1204}
+
+/* Hero */
+.hm img.ld{animation:kb 26s ease-in-out infinite alternate}
+@keyframes kb{to{transform:scale(1.09) translate(-1%,1%)}}
+.hero::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;mix-blend-mode:screen;background:conic-gradient(from 200deg at 78% -8%,transparent 0 18deg,#ffffff14 22deg 30deg,transparent 36deg);animation:beam 7s ease-in-out infinite alternate}
+@keyframes beam{from{opacity:.35}to{opacity:.95}}
+.hero h1,.dh h1{color:var(--ivory)}
+.rank-tag{background:linear-gradient(135deg,#f3cf7a,var(--gold));color:#2a1a02;border-radius:3px;padding:5px 18px;-webkit-mask:radial-gradient(circle 5px at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 5px at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat;mask:radial-gradient(circle 5px at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 5px at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat}
+
+/* Kartu interaktif */
+.sec h2::before{content:"";display:inline-block;width:3px;height:1em;margin-right:10px;vertical-align:-.12em;background:var(--red);border-radius:2px}
+.card{will-change:transform}
+.card:hover,.card:focus-visible{transform:perspective(900px) scale(1.07) rotateX(var(--ry,0deg)) rotateY(var(--rx,0deg));transition:transform .12s linear,box-shadow .35s;box-shadow:0 20px 50px #000e,0 0 0 1px #ffffff40,0 0 40px #e5091433}
+.card::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;background:radial-gradient(circle at var(--mx,50%) var(--my,50%),#ffffff2e,transparent 55%)}
+.card:hover::after{opacity:1}
+.prog i{box-shadow:0 0 8px var(--red)}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(.96)}}
+#app.in .track>*,#app.in .grid>*{animation:cardIn .65s var(--ease) both}
+#app.in .track>:nth-child(2),#app.in .grid>:nth-child(2){animation-delay:.05s}
+#app.in .track>:nth-child(3),#app.in .grid>:nth-child(3){animation-delay:.1s}
+#app.in .track>:nth-child(4),#app.in .grid>:nth-child(4){animation-delay:.15s}
+#app.in .track>:nth-child(5),#app.in .grid>:nth-child(5){animation-delay:.2s}
+#app.in .track>:nth-child(6),#app.in .grid>:nth-child(6){animation-delay:.25s}
+#app.in .track>:nth-child(n+7),#app.in .grid>:nth-child(n+7){animation-delay:.3s}
+
+/* Detail & pemutar */
+.dh>*{animation:rise .7s both}
+.dh>:nth-child(n+2){animation-delay:.12s}
+.po{transition:transform .5s var(--ease)}
+.po:hover{transform:translateY(-6px) rotate(-1deg)}
+.chip.star{border-color:#f5c51855}
+.stage{position:relative;box-shadow:0 30px 90px #000,0 0 140px #e5091426,0 0 0 1px var(--line);animation:screenIn .8s var(--ease) both}
+@keyframes screenIn{from{opacity:0;transform:scale(.96)}}
+.theater::before{content:"";position:absolute;left:8%;right:8%;top:-10px;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.7}
+.cast-card img{transition:transform .3s var(--ease),box-shadow .3s}
+.cast-card:hover img{transform:scale(1.08);box-shadow:0 0 0 2px var(--gold)}
+.dsk{display:grid;grid-template-columns:minmax(150px,260px) 1fr;gap:32px;align-items:end;padding:110px var(--pad) 20px}
+.dsk .po-sk{aspect-ratio:2/3;border-radius:6px}
+.dsk .l1{height:44px;width:70%;border-radius:4px}
+.dsk .l2{height:14px;width:90%;margin-top:14px;border-radius:4px}
+.dsk .l3{height:14px;width:60%;margin-top:10px;border-radius:4px}
+.stage-sk{aspect-ratio:16/9;margin:10px var(--pad) 0;border-radius:6px}
+@media(max-width:700px){.dsk{grid-template-columns:1fr}.dsk .po-sk{max-width:150px}}
+
+/* Footer: perforasi pita film */
+footer{background:repeating-linear-gradient(90deg,#ffffff14 0 10px,transparent 10px 22px) top/100% 6px no-repeat}
