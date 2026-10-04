@@ -65,6 +65,18 @@ const skeleton = () => `
   <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>
   <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>`;
 
+// FUNGSI INI YANG TADI ILANG LEK
+function stateBox(title, msg, action) {
+  app.innerHTML = `<div class="state"><h3>${esc(title)}</h3><p>${esc(msg)}</p>${action || ''}</div>`;
+}
+
+// INI JUGA TADI ILANG, PANTESAN DIA KAGA BISA FETCH
+async function api(q) {
+  const r = await fetch(`/api/movie?${q}`);
+  if (!r.ok) throw new Error(`Server membalas ${r.status}`);
+  return r.json();
+}
+
 function renderHome(data) {
   const trend = Array.isArray(data.trending) ? data.trending : [];
   const latest = Array.isArray(data.latest) ? data.latest : [];
