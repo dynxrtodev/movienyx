@@ -187,7 +187,7 @@ function renderDetail(m) {
         <div class="cast-track">
           ${m.cast.map(c => `
             <div class="cast-card">
-              <img src="${c.photo \vert{}\vert{} NOPOSTER}" alt="${esc(c.name)}" loading="lazy" onerror="this.onerror=null;this.src=NOPOSTER">
+              <img src="${c.photo || NOPOSTER}" alt="${esc(c.name)}" loading="lazy" onerror="this.onerror=null;this.src=NOPOSTER">
               <b>${esc(c.name)}</b>
               <span>${esc(c.character)}</span>
             </div>
