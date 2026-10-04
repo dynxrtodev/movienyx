@@ -94,19 +94,17 @@ async function loadHome() {
   app.innerHTML = skeleton();
   
   try {
-    // Tarik data secara berurutan biar sistem keamanan server target kaga panik (Anti-Rate Limit)
-    const trendRes = await api('action=trending');
-    const latestRes = await api('action=latest');
-    const topRes = await api('action=toprated');
-    const upRes = await api('action=upcoming');
-
+    // Web cukup nembak 1 kali ke jalur "home". 
+    // Beban narik 4 kategori diserahin ke VPS Pterodactyl.
+    const data = await api('action=home');
+    
     if (my !== token) return;
 
     renderHome({
-      trending: trendRes.results || trendRes,
-      latest: latestRes.results || latestRes,
-      toprated: topRes.results || topRes,
-      upcoming: upRes.results || upRes
+      trending: data.trending || [],
+      latest: data.latest || [],
+      toprated: data.toprated || [],
+      upcoming: data.upcoming || []
     });
   } catch (err) {
     if (my !== token) return;
