@@ -1,26 +1,37 @@
 const app = $('#app');
 const form = $('#searchForm');
 const input = $('#searchInput');
-let retry = null;
-let token = 0; // cegah hasil lama menimpa hasil baru
+const tabs = document.querySelectorAll('.cat-btn');
 
-const link = (m) => `detail.html?id=${encodeURIComponent(m.slug)}`;
+let retry = null;
+let token = 0; 
+let currentMode = 'movie'; // Default mode
+
+// Format link beda-beda tergantung tipe data biar halaman detail tau narik API mana
+const link = (m) => `detail.html?id=${encodeURIComponent(m.slug)}&mode=${currentMode}`;
 const rate = (m) => (m.rating ? `<span class="star">${I.star}${esc(m.rating)}</span>` : '');
 const img = (m, cls = '') => `<img ${cls ? `class="${cls}" ` : ''}src="${esc(m.poster || NOPOSTER)}" alt="${esc(m.title)}" loading="lazy" onerror="this.onerror=null;this.src=NOPOSTER">`;
 
 const card = (m) => `
   <a class="card" href="${link(m)}" aria-label="${esc(m.title)}">
     ${img(m)}
-    <div class="ov"><span class="pl">${I.play}</span><b>${esc(m.title)}</b><small>${rate(m)}<span>${esc(m.year || '-')}</span></small></div>
+    <div class="ov">
+      <span class="pl">${I.play}</span>
+      <b>${esc(m.title)}</b>
+      <small>${rate(m)}<span>${esc(m.year || m.release_year || '-')}</span></small>
+    </div>
   </a>`;
 
-// Kartu "lanjutkan menonton": ada bar progres + posisi terakhir
 const histCard = (x) => {
   const pct = x.total ? Math.min(100, Math.round((x.watched / x.total) * 100)) : 0;
   return `
   <a class="card" href="${resumeLink(x)}" aria-label="Lanjutkan ${esc(x.title)} dari ${fmtTime(x.watched)}">
     ${img(x)}
-    <div class="ov"><span class="pl">${I.play}</span><b>${esc(x.title)}</b><small><span>${I.clock}Lanjut ${fmtTime(x.watched)}</span></small></div>
+    <div class="ov">
+      <span class="pl">${I.play}</span>
+      <b>${esc(x.title)}</b>
+      <small><span>${I.clock}Lanjut ${fmtTime(x.watched)}</span></small>
+    </div>
     ${pct ? `<div class="prog"><i style="width:${pct}%"></i></div>` : ''}
   </a>`;
 };
@@ -48,36 +59,35 @@ const hero = (m) => `
   <section class="hero">
     <div class="bd" style="background-image:url('${esc(m.poster || '')}')"></div>
     <div class="hc">
-      <span class="rank-tag">${I.trend}No. 1 hari ini</span>
+      <span class="rank-tag">${I.trend}Paling Populer</span>
       <h1>${esc(m.title)}</h1>
-      <div class="meta">${rate(m)}<span>${esc(m.year || '-')}</span></div>
+      <div class="meta">${rate(m)}<span>${esc(m.year || m.release_year || '-')}</span></div>
       <div class="btns">
-        <a class="btn" href="${link(m)}">${I.play}Putar</a>
-        <a class="btn ghost" href="${link(m)}">${I.info}Info lainnya</a>
+        <a class="btn" href="${link(m)}">${I.play}Tonton Sekarang</a>
       </div>
     </div>
     ${img(m, 'hp')}
   </section>`;
 
 const skeleton = () => `
-  <div class="hero sk"></div>
+  <div class="hero sk" style="margin-top:-60px"></div>
   <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>
   <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>
   <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>`;
 
-// FUNGSI INI YANG TADI ILANG LEK
 function stateBox(title, msg, action) {
-  app.innerHTML = `<div class="state"><h3>${esc(title)}</h3><p>${esc(msg)}</p>${action || ''}</div>`;
+  app.innerHTML = `<div class="state" style="padding-top:180px"><h3>${esc(title)}</h3><p>${esc(msg)}</p>${action || ''}</div>`;
 }
 
-// INI JUGA TADI ILANG, PANTESAN DIA KAGA BISA FETCH
+// Logika pemanggilan API dinamis berdasarkan currentMode
 async function api(q) {
-  const r = await fetch(`/api/movie?${q}`);
+  const endpoint = currentMode === 'anime' ? '/api/anime' : '/api/movie';
+  const r = await fetch(`${endpoint}?${q}`);
   if (!r.ok) throw new Error(`Server membalas ${r.status}`);
   return r.json();
 }
 
-function renderHome(data) {
+function renderHomeMovie(data) {
   const trend = Array.isArray(data.trending) ? data.trending : [];
   const latest = Array.isArray(data.latest) ? data.latest : [];
   const upcoming = Array.isArray(data.upcoming) ? data.upcoming : [];
@@ -99,6 +109,20 @@ function renderHome(data) {
     (upcoming.length ? row('Segera Tayang', upcoming.map(card).join('')) : '');
 }
 
+function renderHomeAnime(data) {
+  const list = Array.isArray(data.data) ? data.data : (Array.isArray(data.results) ? data.results : []);
+  
+  if (!list.length) {
+    stateBox('Belum ada anime', 'Daftar anime kosong atau server sedang sibuk.', '<button class="btn red" data-retry>Muat ulang</button>');
+    return;
+  }
+
+  const firstCard = list[0];
+  const gridHtml = `<section class="sec" style="margin-top:-30px"><div class="grid">${list.map(card).join('')}</div></section>`;
+  
+  app.innerHTML = hero(firstCard) + gridHtml;
+}
+
 async function loadHome() {
   const my = ++token;
   retry = loadHome;
@@ -106,18 +130,15 @@ async function loadHome() {
   app.innerHTML = skeleton();
   
   try {
-    // Web cukup nembak 1 kali ke jalur "home". 
-    // Beban narik 4 kategori diserahin ke VPS Pterodactyl.
     const data = await api('action=home');
-    
     if (my !== token) return;
 
-    renderHome({
-      trending: data.trending || [],
-      latest: data.latest || [],
-      toprated: data.toprated || [],
-      upcoming: data.upcoming || []
-    });
+    if (currentMode === 'movie') {
+      renderHomeMovie(data);
+    } else {
+      renderHomeAnime(data);
+    }
+    paintIcons();
   } catch (err) {
     if (my !== token) return;
     stateBox('Beranda gagal dimuat', err.message, '<button class="btn red" data-retry>Coba lagi</button>');
@@ -128,21 +149,35 @@ async function search(q) {
   const my = ++token;
   retry = () => search(q);
   scrollTo(0, 0);
-  app.innerHTML = `<section class="sec res"><div class="sec-head"><h2>Mencari “${esc(q)}”</h2></div><div class="grid">${'<div class="card sk"></div>'.repeat(10)}</div></section>`;
+  app.innerHTML = `<section class="sec res" style="padding-top:140px"><div class="sec-head"><h2>Mencari “${esc(q)}”</h2></div><div class="grid">${'<div class="card sk"></div>'.repeat(10)}</div></section>`;
   try {
     const d = await api(`action=search&keyword=${encodeURIComponent(q)}`);
     if (my !== token) return;
-    const list = d.results || [];
+    
+    // Nyesuaiin struktur JSON balikan. API anime ngereturn { data: [...] }, API movie ngereturn { results: [...] }
+    const list = Array.isArray(d.data) ? d.data : (Array.isArray(d.results) ? d.results : []);
+    
     if (!list.length) {
       stateBox(`Tidak ada hasil untuk “${q}”`, 'Coba kata kunci lain atau periksa ejaan judulnya.', '<button class="btn red" data-home>Kembali ke beranda</button>');
       return;
     }
-    app.innerHTML = `<section class="sec res"><div class="sec-head"><h2>Hasil untuk “${esc(q)}”</h2><span class="count">${list.length} judul</span></div><div class="grid">${list.map(card).join('')}</div></section>`;
+    app.innerHTML = `<section class="sec res" style="padding-top:140px"><div class="sec-head"><h2>Hasil untuk “${esc(q)}”</h2><span class="count">${list.length} judul</span></div><div class="grid">${list.map(card).join('')}</div></section>`;
   } catch (err) {
     if (my !== token) return;
     stateBox('Pencarian gagal', err.message, '<button class="btn red" data-retry>Coba lagi</button>');
   }
 }
+
+// Logika Ganti Tab
+tabs.forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    tabs.forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.type; // 'movie' atau 'anime'
+    input.value = ''; // Reset input pencarian pas ganti tab
+    loadHome();
+  });
+});
 
 form.addEventListener('submit', (e) => {
   e.preventDefault();
@@ -159,7 +194,6 @@ input.addEventListener('keydown', (e) => {
   }
 });
 
-// Tekan "/" untuk langsung mengetik pencarian
 document.addEventListener('keydown', (e) => {
   if (e.key === '/' && document.activeElement !== input && !e.target.closest('input,textarea')) {
     e.preventDefault();
@@ -180,9 +214,9 @@ app.addEventListener('click', (e) => {
   }
 });
 
-// Kembali dari halaman detail (bfcache) → segarkan baris "Lanjutkan menonton"
 window.addEventListener('pageshow', (e) => {
   if (e.persisted && !input.value.trim()) loadHome();
 });
 
+// Init load
 loadHome();

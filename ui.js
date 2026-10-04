@@ -2,6 +2,7 @@
 const $ = (s) => document.querySelector(s);
 
 const ic = (name) => `<i data-lucide="${name}" aria-hidden="true"></i>`;
+// ... kode yang udah ada di ui.js ...
 const I = {
   play: ic('play'),
   info: ic('info'),
@@ -16,6 +17,9 @@ const I = {
   resume: ic('play-circle'),
   restart: ic('rotate-ccw'),
   trend: ic('trending-up'),
+  // --- TAMBAHAN ICON BARU ---
+  film: ic('film'),
+  swords: ic('swords'), 
 };
 
 const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

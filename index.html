@@ -9,6 +9,45 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
+  <style>
+    /* Styling khusus tab Navigasi Kategori */
+    .cat-tabs {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 100px; /* Jarak dari navbar */
+      margin-bottom: -100px; /* Biar nyatu sama hero section */
+      position: relative;
+      z-index: 20;
+    }
+    .cat-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      border-radius: 30px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 15px;
+      transition: all 0.3s var(--ease);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .cat-btn:hover {
+      border-color: #fff6;
+      transform: translateY(-2px);
+    }
+    .cat-btn.active {
+      background: var(--red);
+      border-color: var(--red);
+      box-shadow: 0 4px 20px rgba(225, 29, 46, 0.4);
+    }
+    .cat-btn svg { font-size: 18px; }
+    
+    /* Supaya form pencarian ga tumpang tindih sama tab */
+    .res { padding-top: 40px !important; }
+  </style>
 </head>
 <body>
   <div id="dnsGate" class="dns-gate" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="dnsTitle">
@@ -18,7 +57,6 @@
       <p class="dns-desc">
         Untuk memberikan pengalaman menonton terbaik yang terbebas dari iklan <i>pop-up</i> yang mengganggu serta melindungi perangkat Anda dari potensi risiko keamanan pihak ketiga, kami sangat menyarankan Anda untuk menggunakan <b>Private DNS</b> dari AdGuard sebelum melanjutkan.
       </p>
-
       <div class="dns-steps">
         <strong>Panduan Pengaturan Cepat:</strong>
         <ol>
@@ -29,7 +67,6 @@
           <li>Simpan pengaturan, lalu kembali ke halaman ini.</li>
         </ol>
       </div>
-
       <div class="dns-actions">
         <button id="btnDnsDone" class="btn red">Saya sudah setup DNS</button>
         <button id="btnDnsSkip" class="btn ghost">Lewatkan setup DNS</button>
@@ -41,10 +78,20 @@
     <a class="logo" href="index.html" aria-label="Movienyx, ke beranda"><i data-lucide="clapperboard" aria-hidden="true"></i><span>Movienyx</span></a>
     <form class="search" id="searchForm" role="search">
       <button type="submit" id="searchBtn" aria-label="Cari"><i data-lucide="search" aria-hidden="true"></i></button>
-      <input id="searchInput" type="search" placeholder="Judul film atau series" autocomplete="off" aria-label="Cari film atau series">
+      <input id="searchInput" type="search" placeholder="Cari tontonan..." autocomplete="off" aria-label="Cari tontonan">
     </form>
     <a class="navlink" href="history.html" aria-label="Riwayat tontonan"><i data-lucide="history" aria-hidden="true"></i><span>Riwayat</span></a>
   </header>
+
+  <!-- Tab Kategori -->
+  <div class="cat-tabs" id="catTabs">
+    <button class="cat-btn active" data-type="movie">
+      <i data-lucide="film" aria-hidden="true"></i> Film & Series
+    </button>
+    <button class="cat-btn" data-type="anime">
+      <i data-lucide="swords" aria-hidden="true"></i> Anime List
+    </button>
+  </div>
 
   <main id="app" aria-live="polite"></main>
 
