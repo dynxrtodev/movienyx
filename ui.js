@@ -172,20 +172,27 @@ setTimeout(hideSplash, 6000);
 
 /* ---------- Interaksi: tilt kartu & transisi halaman ---------- */
 if (matchMedia('(hover:hover)').matches && !matchMedia('(prefers-reduced-motion:reduce)').matches) {
+  let tc = null, rect = null, px = 0, py = 0, raf = 0;
+  const apply = () => {
+    raf = 0;
+    if (!tc || !rect) return;
+    const x = (px - rect.left) / rect.width, y = (py - rect.top) / rect.height;
+    tc.style.setProperty('--rx', ((x - 0.5) * 8).toFixed(1) + 'deg');
+    tc.style.setProperty('--ry', ((0.5 - y) * 8).toFixed(1) + 'deg');
+  };
   document.addEventListener('pointermove', (e) => {
+    if (e.pointerType !== 'mouse') return;
     const c = e.target.closest?.('.card:not(.sk)');
-    if (!c) return;
-    const r = c.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
-    c.style.setProperty('--rx', ((x - 0.5) * 10).toFixed(2) + 'deg');
-    c.style.setProperty('--ry', ((0.5 - y) * 10).toFixed(2) + 'deg');
-    c.style.setProperty('--mx', (x * 100).toFixed(1) + '%');
-    c.style.setProperty('--my', (y * 100).toFixed(1) + '%');
+    if (!c) { tc = null; return; }
+    if (c !== tc) { tc = c; rect = c.getBoundingClientRect(); }
+    px = e.clientX; py = e.clientY;
+    if (!raf) raf = requestAnimationFrame(apply);
   }, { passive: true });
   document.addEventListener('pointerout', (e) => {
     const c = e.target.closest?.('.card');
-    if (c && !c.contains(e.relatedTarget)) { c.style.removeProperty('--rx'); c.style.removeProperty('--ry'); }
+    if (c && !c.contains(e.relatedTarget)) { c.style.removeProperty('--rx'); c.style.removeProperty('--ry'); if (tc === c) tc = null; }
   });
+  document.addEventListener('scroll', () => { tc = null; }, { capture: true, passive: true });
 }
 document.addEventListener('click', (e) => {
   const a = e.target.closest('a[href]');
