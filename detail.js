@@ -1,13 +1,13 @@
 const content = $('#detail');
 const qs = new URLSearchParams(location.search);
 const slugId = qs.get('id');
+const viewMode = qs.get('mode') || 'movie'; // Nangkep parameter mode dari URL
 const resumeAt = Math.max(0, parseInt(qs.get('t'), 10) || 0); 
 const startServer = Math.max(0, parseInt(qs.get('s'), 10) || 0);
 
 let movie = null;
 let servers = [];
 let cur = 0;
-let currentSeason = 1;
 
 const P = { watched: 0, total: 0, loaded: false, synced: false, paused: false, hold: 0 };
 
@@ -18,19 +18,30 @@ function stateBox(title, msg) {
 async function loadDetail() {
   if (!slugId) return stateBox('Film tidak ditemukan', 'Alamat halaman ini tidak memuat ID film.');
   try {
-    const res = await fetch(`/api/movie?action=detail&id=${encodeURIComponent(slugId)}`);
+    // Penentuan endpoint berdasarkan mode (movie vs anime)
+    const endpoint = viewMode === 'anime' ? '/api/anime' : '/api/movie';
+    const res = await fetch(`${endpoint}?action=detail&id=${encodeURIComponent(slugId)}`);
     if (!res.ok) throw new Error(`Server membalas ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
     movie = data;
     renderDetail(movie);
   } catch (err) {
-    stateBox('Detail film gagal dimuat', err.message);
+    stateBox('Detail gagal dimuat', err.message);
   }
 }
 
+// Fungsi extract server disesuaikan, karena struktur json Anime/NanimeID & Moviezone beda
 function getServers(m) {
   const list = [];
+  
+  if (viewMode === 'anime') {
+    // Kalau anime, struktur datanya belum nyimpen server di 'm' utama, tapi per-episode.
+    // Jadi server list buat stage awal kita kosongin dulu sampai user pilih episode.
+    return list; 
+  }
+
+  // Khusus Moviezone (Film biasa)
   if (m.primary_stream) list.push({ name: 'Utama', url: m.primary_stream });
   (m.servers || []).forEach((s) => {
     if (s && s.url && !list.some((x) => x.url === s.url)) list.push({ name: s.name || `Server ${list.length + 1}`, url: s.url });
@@ -50,6 +61,8 @@ function withStart(url, sec) {
 
 function setSource(i, at = 0) {
   cur = i;
+  if (!servers[i]) return;
+  
   const url = withStart(servers[i].url, at);
   P.loaded = true; 
   P.synced = false;
@@ -58,8 +71,79 @@ function setSource(i, at = 0) {
   $('#openTab').href = url;
 }
 
-/* ---------- Ekstrak Episode (Khusus TV Series) ---------- */
-async function loadEpisodes(seasonNumber) {
+/* ---------- Ekstrak Episode Dinamis (Bisa Anime & Series Moviezone) ---------- */
+window.playEpisodeAnime = async function(btnElement, slugReq, epNumber) {
+  // Animasi loading di tombol
+  const originalText = btnElement.innerHTML;
+  btnElement.innerHTML = 'Memuat...';
+  btnElement.style.pointerEvents = 'none';
+
+  try {
+    const res = await fetch(`/api/anime?action=episode&id=${encodeURIComponent(slugReq)}`);
+    const data = await res.json();
+    
+    // Gabungin streams dan mirror_streams jadi satu list server
+    servers = [];
+    if (data.episode && data.episode.video_url) {
+      servers.push({ name: 'Utama', url: data.episode.video_url });
+    }
+    if (Array.isArray(data.mirror_streams)) {
+      data.mirror_streams.forEach((m, i) => {
+        servers.push({ name: m.label || `Mirror ${i+1}`, url: m.url });
+      });
+    }
+
+    if (servers.length === 0) throw new Error('Video tidak tersedia');
+
+    toast(`Memutar Episode ${epNumber}`);
+    
+    // Render ulang tombol server di bawah pemutar
+    const floor = $('.floor');
+    let srvHtml = `<span class="lbl">Server Eps ${epNumber}</span>`;
+    srvHtml += servers.map((s, i) => `<button class="srv" data-i="${i}" aria-pressed="${i === 0}">${esc(s.name)}</button>`).join('');
+    
+    // Pertahankan tombol tools (buka tab baru & mode bioskop)
+    const tools = floor.querySelector('.tools') ? floor.querySelector('.tools').outerHTML : '';
+    floor.innerHTML = srvHtml + tools;
+    
+    // Reset tracker riwayat untuk episode baru dan jalankan video
+    P.watched = 0;
+    P.hold = 0;
+    setSource(0, 0);
+
+  } catch (err) {
+    toast(`Gagal memuat video: ${err.message}`);
+  } finally {
+    btnElement.innerHTML = originalText;
+    btnElement.style.pointerEvents = 'auto';
+  }
+}
+
+// Terpicu saat user ngeklik episode dari Moviezone TV Series
+window.playEpisodeSeries = function(element, epNumber) {
+  const rawServers = decodeURIComponent(element.getAttribute('data-servers'));
+  let epServers = [];
+  try { epServers = JSON.parse(rawServers); } catch(e){}
+  
+  if(epServers.length > 0) {
+    servers = epServers.map((s, i) => ({ name: s.name || `Server ${i+1}`, url: s.url }));
+    toast(`Memutar Episode ${epNumber}`);
+    
+    const floor = $('.floor');
+    let srvHtml = `<span class="lbl">Server Eps ${epNumber}</span>`;
+    srvHtml += servers.map((s, i) => `<button class="srv" data-i="${i}" aria-pressed="${i === 0}">${esc(s.name)}</button>`).join('');
+    const tools = floor.querySelector('.tools') ? floor.querySelector('.tools').outerHTML : '';
+    floor.innerHTML = srvHtml + tools;
+    
+    P.watched = 0;
+    P.hold = 0;
+    setSource(0, 0);
+  } else {
+    toast('Server untuk episode ini kosong.');
+  }
+}
+
+async function loadEpisodesSeries(seasonNumber) {
   const epContainer = $('#episodes-list');
   epContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--mute);">Memuat episode...</div>';
   try {
@@ -73,11 +157,10 @@ async function loadEpisodes(seasonNumber) {
 
     let html = '';
     data.episodes.forEach(ep => {
-      // Simpan data server episode ini ke dalam string JSON tersembunyi biar gampang dipanggil
       const epServersStr = encodeURIComponent(JSON.stringify(ep.servers));
       const thumb = ep.still ? ep.still : (movie.backdrop || NOPOSTER);
       html += `
-        <div class="ep-card" data-servers="${epServersStr}" onclick="playEpisode(this, ${ep.episode})">
+        <div class="ep-card" data-servers="${epServersStr}" onclick="playEpisodeSeries(this, ${ep.episode})">
           <img src="${esc(thumb)}" alt="Eps ${ep.episode}" loading="lazy" onerror="this.onerror=null;this.src=NOPOSTER">
           <div class="ep-info">
             <h4>Eps ${ep.episode}: ${esc(ep.title || `Episode ${ep.episode}`)}</h4>
@@ -92,39 +175,10 @@ async function loadEpisodes(seasonNumber) {
   }
 }
 
-// Terpicu saat user ngeklik episode tertentu di daftar
-window.playEpisode = function(element, epNumber) {
-  const rawServers = decodeURIComponent(element.getAttribute('data-servers'));
-  let epServers = [];
-  try { epServers = JSON.parse(rawServers); } catch(e){}
-  
-  if(epServers.length > 0) {
-    // Timpa server utama dengan server khusus episode ini
-    servers = epServers.map((s, i) => ({ name: s.name || `Server ${i+1}`, url: s.url }));
-    toast(`Memutar Episode ${epNumber}`);
-    
-    // Render ulang tombol server di bawah pemutar
-    const floor = $('.floor');
-    let srvHtml = `<span class="lbl">Server Eps ${epNumber}</span>`;
-    srvHtml += servers.map((s, i) => `<button class="srv" data-i="${i}" aria-pressed="${i === 0}">${esc(s.name)}</button>`).join('');
-    
-    // Pertahankan tombol tools (buka tab baru & mode bioskop)
-    const tools = floor.querySelector('.tools').outerHTML;
-    floor.innerHTML = srvHtml + tools;
-    
-    // Reset tracker riwayat untuk episode baru dan jalankan video
-    P.watched = 0;
-    P.hold = 0;
-    setSource(0, 0);
-  } else {
-    toast('Server untuk episode ini kosong.');
-  }
-}
-
 /* ---------- Simpan riwayat ---------- */
 function persist() {
   if (!movie) return;
-  const total = P.total || parseDuration(movie.duration);
+  const total = P.total || parseDuration(movie.duration || '24m'); // Default 24 menit untuk anime jika kosong
   let w = Math.floor(P.watched);
   if (total && w > total) w = total;
   if (w < 3 || w < P.hold) return; 
@@ -132,9 +186,10 @@ function persist() {
   const done = total ? w >= total * 0.95 : false;
   Hist.upsert({
     id: slugId,
+    mode: viewMode, // Simpan mode biar pas di-resume ga salah narik API
     title: movie.title,
     poster: movie.poster || '',
-    year: movie.year || '',
+    year: movie.year || movie.release_year || '',
     durationText: movie.duration || '',
     total,
     watched: done ? total : w,
@@ -176,9 +231,9 @@ function renderDetail(m) {
   const poster = esc(m.poster || NOPOSTER);
   const saved = Hist.get(slugId);
   const offer = !resumeAt && saved && !saved.done && saved.watched >= 5 ? saved : null;
-  const isSeries = m.type && m.type.toLowerCase() === 'series';
+  const isMoviezoneSeries = viewMode === 'movie' && m.type && m.type.toLowerCase() === 'series';
 
-  // Render Deretan Artis (Cast)
+  // Render Deretan Artis (Cast - Cuma buat Moviezone)
   let castHtml = '';
   if (m.cast && m.cast.length > 0) {
     castHtml = `
@@ -187,7 +242,7 @@ function renderDetail(m) {
         <div class="cast-track">
           ${m.cast.map(c => `
             <div class="cast-card">
-              <img src="${c.photo || NOPOSTER}" alt="${esc(c.name)}" loading="lazy" onerror="this.onerror=null;this.src=NOPOSTER">
+              <img src="${c.photo \vert{}\vert{} NOPOSTER}" alt="${esc(c.name)}" loading="lazy" onerror="this.onerror=null;this.src=NOPOSTER">
               <b>${esc(c.name)}</b>
               <span>${esc(c.character)}</span>
             </div>
@@ -197,16 +252,33 @@ function renderDetail(m) {
     `;
   }
 
-  // Render Dropdown Musim (Khusus Series)
-  let seasonHtml = '';
-  if (isSeries && m.seasons && m.seasons.length > 0) {
-    seasonHtml = `
+  // Render Dropdown Musim (Khusus Moviezone Series)
+  let mzSeasonHtml = '';
+  if (isMoviezoneSeries && m.seasons && m.seasons.length > 0) {
+    mzSeasonHtml = `
       <div class="season-selector" style="margin-top: 25px;">
         <h3 style="margin-bottom: 10px; font-family: var(--disp); letter-spacing: 1px;">Daftar Episode</h3>
         <select id="seasonSelect" style="padding: 8px 12px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: var(--r); outline: none;">
           ${m.seasons.map(s => `<option value="${s.season_number}">${esc(s.name)} (${s.episode_count} Eps)</option>`).join('')}
         </select>
         <div id="episodes-list" class="ep-grid" style="margin-top: 15px;"></div>
+      </div>
+    `;
+  }
+
+  // Render Tombol Daftar Episode (Khusus Anime NanimeID)
+  let animeEpHtml = '';
+  if (viewMode === 'anime' && m.episodes && m.episodes.length > 0) {
+    animeEpHtml = `
+      <div class="season-selector" style="margin-top: 25px;">
+        <h3 style="margin-bottom: 10px; font-family: var(--disp); letter-spacing: 1px;">Pilih Episode</h3>
+        <div class="ep-grid" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));">
+          ${m.episodes.map(ep => `
+            <button class="srv" onclick="playEpisodeAnime(this, '${esc(ep.slug_req)}',${ep.number})" style="text-align:center; padding: 12px">
+              Eps ${ep.number}
+            </button>
+          `).join('')}
+        </div>
       </div>
     `;
   }
@@ -219,8 +291,9 @@ function renderDetail(m) {
         <h1>${esc(m.title)}</h1>
         <div class="chips">
           ${m.rating ? `<span class="chip star">${I.star}${esc(m.rating)}</span>` : ''}
-          <span class="chip">${esc(m.year || '-')}</span>
-          <span class="chip">${I.clock}${esc(m.duration || '-')}</span>
+          <span class="chip">${esc(m.year || m.release_year || '-')}</span>
+          ${m.duration ? `<span class="chip">${I.clock}${esc(m.duration)}</span>` : ''}
+          ${m.episodes_count ? `<span class="chip">Total Eps: ${esc(m.episodes_count)}</span>` : ''}
         </div>
         <p class="syn">${esc(m.synopsis || 'Belum ada sinopsis untuk film ini.')}</p>
       </div>
@@ -239,7 +312,9 @@ function renderDetail(m) {
       <div class="stage"><div class="screen" id="screen"></div></div>
       
       <div class="floor">
-        <span class="lbl">Server Utama</span>
+        <span class="lbl">
+          ${viewMode === 'anime' ? 'Pilih episode di bawah untuk memuat player' : 'Server Utama'}
+        </span>
         ${servers.map((s, i) => `<button class="srv" data-i="${i}" aria-pressed="${i === Math.min(startServer, servers.length - 1)}">${esc(s.name)}</button>`).join('')}
         <div class="tools">
           <a class="tool" id="openTab" target="_blank" rel="noopener">${I.ext}Buka di tab baru</a>
@@ -249,14 +324,13 @@ function renderDetail(m) {
       <p class="hint" id="hint" hidden></p>
     </section>
     
-    <!-- Area Cast & Seasons ditaruh di bawah player -->
     <section style="padding: 0 var(--pad); margin-top: 30px; margin-bottom: 50px;">
       ${castHtml}
-      ${seasonHtml}
+      ${mzSeasonHtml}
+      ${animeEpHtml}
     </section>
   `;
 
-  // Logika inisialisasi player bawaan film (sebelum pilih episode)
   const first = Math.min(startServer, servers.length - 1);
   if (servers.length) {
     P.watched = resumeAt;
@@ -264,11 +338,12 @@ function renderDetail(m) {
     setSource(first, resumeAt);
     if (resumeAt) showResumed(resumeAt);
   } else {
-    $('#screen').innerHTML = '<div class="perr"><b>Sumber video belum tersedia</b><span>Film ini belum punya server pemutar.</span></div>';
-    $('#openTab').remove();
+    // Kalau anime, layar defaultnya suruh pilih episode dulu. Kalau movie tapi kosong = server down.
+    const msg = viewMode === 'anime' ? 'Silakan pilih episode di bawah untuk memulai' : 'Film ini belum punya server pemutar.';
+    $('#screen').innerHTML = `<div class="perr"><b>${viewMode === 'anime' ? 'Pilih Episode' : 'Sumber video belum tersedia'}</b><span>${msg}</span></div>`;
+    if(viewMode !== 'anime') $('#openTab')?.remove();
   }
 
-  // Event Listener UI
   $('#resumeYes')?.addEventListener('click', () => {
     P.hold = 0; P.watched = offer.watched; setSource(cur, offer.watched);
     $('#resume').remove(); showResumed(offer.watched);
@@ -278,7 +353,6 @@ function renderDetail(m) {
     P.hold = 0; P.watched = 0; setSource(cur, 0); $('#resume').remove();
   });
 
-  // Karena area '.floor' isinya dinamis (berubah pas ganti episode), kita attach event di '.theater'
   content.querySelector('.theater').addEventListener('click', (e) => {
     const b = e.target.closest('.srv');
     if (!b) return;
@@ -292,12 +366,11 @@ function renderDetail(m) {
   dim?.addEventListener('click', () => toggle(!document.body.classList.contains('dim')));
   document.addEventListener('keydown', (e) => e.key === 'Escape' && toggle(false));
 
-  // Jalankan fetch episode jika ini adalah TV Series
-  if (isSeries && m.seasons && m.seasons.length > 0) {
+  if (isMoviezoneSeries && m.seasons && m.seasons.length > 0) {
     const seasonSelect = $('#seasonSelect');
-    loadEpisodes(seasonSelect.value); // Load default
+    loadEpisodesSeries(seasonSelect.value); 
     seasonSelect.addEventListener('change', (e) => {
-      loadEpisodes(e.target.value);
+      loadEpisodesSeries(e.target.value);
     });
   }
 }
