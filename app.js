@@ -94,21 +94,19 @@ async function loadHome() {
   app.innerHTML = skeleton();
   
   try {
-    // Tarik semua data secara paralel biar ngebut
-    const [trendRes, latestRes, upRes, topRes] = await Promise.all([
-      api('action=trending'),
-      api('action=latest'),
-      api('action=upcoming'),
-      api('action=toprated')
-    ]);
+    // Tarik data secara berurutan biar sistem keamanan server target kaga panik (Anti-Rate Limit)
+    const trendRes = await api('action=trending');
+    const latestRes = await api('action=latest');
+    const topRes = await api('action=toprated');
+    const upRes = await api('action=upcoming');
 
     if (my !== token) return;
 
     renderHome({
       trending: trendRes.results || trendRes,
       latest: latestRes.results || latestRes,
-      upcoming: upRes.results || upRes,
-      toprated: topRes.results || topRes
+      toprated: topRes.results || topRes,
+      upcoming: upRes.results || upRes
     });
   } catch (err) {
     if (my !== token) return;
