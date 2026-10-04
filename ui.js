@@ -164,8 +164,8 @@ function hideSplash() {
   setTimeout(() => {
     el.classList.add('out');
     try { sessionStorage.setItem('mn_splash', '1'); } catch { /* diabaikan */ }
-    setTimeout(() => el.remove(), 1500);
-  }, Math.max(0, 1700 - (Date.now() - splashStart)));
+    setTimeout(() => el.remove(), 1000);
+  }, Math.max(0, 1600 - (Date.now() - splashStart)));
 }
 setTimeout(hideSplash, 6000);
 
