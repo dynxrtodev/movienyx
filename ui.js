@@ -85,7 +85,7 @@ const Hist = {
   remove(id) { this.write(this.all().filter((x) => x.id !== id)); },
   clear() { this.write([]); },
 };
-const resumeLink = (x) => `detail.html?id=${encodeURIComponent(x.id)}&t=${Math.floor(x.watched || 0)}&s=${x.server || 0}`;
+const resumeLink = (x) => `detail.html?id=${encodeURIComponent(x.id)}&mode=${encodeURIComponent(x.mode || 'movie')}&t=${Math.floor(x.watched || 0)}&s=${x.server || 0}`;
 
 /* ---------- Toast ---------- */
 function toast(msg) {
@@ -126,3 +126,45 @@ function initDnsGate() {
   document.getElementById('btnDnsSkip')?.addEventListener('click', closeAndSetExpiry);
 }
 window.addEventListener('DOMContentLoaded', initDnsGate);
+
+
+/* ---------- Efek loading: progress bar tipis & splash ---------- */
+const Loader = {
+  bar: null, p: 0, timer: 0, hideT: 0,
+  paint(o, ms = 250) {
+    this.bar.style.transition = `transform ${ms}ms, opacity .3s`;
+    this.bar.style.opacity = o;
+    this.bar.style.transform = `scaleX(${this.p})`;
+  },
+  start() {
+    if (!this.bar) {
+      this.bar = document.createElement('div');
+      this.bar.id = 'topbar';
+      document.body.appendChild(this.bar);
+    }
+    clearInterval(this.timer);
+    clearTimeout(this.hideT);
+    this.p = 0.08;
+    this.paint(1, 0);
+    this.timer = setInterval(() => { this.p += (0.9 - this.p) * 0.08; this.paint(1); }, 200);
+  },
+  done() {
+    if (!this.bar) return;
+    clearInterval(this.timer);
+    this.p = 1;
+    this.paint(1);
+    this.hideT = setTimeout(() => { this.paint(0); }, 250);
+  },
+};
+
+const splashStart = Date.now();
+function hideSplash() {
+  const el = document.getElementById('splash');
+  if (!el) return;
+  setTimeout(() => {
+    el.classList.add('out');
+    try { sessionStorage.setItem('mn_splash', '1'); } catch { /* diabaikan */ }
+    setTimeout(() => el.remove(), 600);
+  }, Math.max(0, 900 - (Date.now() - splashStart)));
+}
+setTimeout(hideSplash, 6000);

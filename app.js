@@ -10,7 +10,7 @@ let currentMode = 'movie'; // Default mode
 // Format link beda-beda tergantung tipe data biar halaman detail tau narik API mana
 const link = (m) => `detail.html?id=${encodeURIComponent(m.slug)}&mode=${currentMode}`;
 const rate = (m) => (m.rating ? `<span class="star">${I.star}${esc(m.rating)}</span>` : '');
-const img = (m, cls = '') => `<img ${cls ? `class="${cls}" ` : ''}src="${esc(m.poster || NOPOSTER)}" alt="${esc(m.title)}" loading="lazy" onerror="this.onerror=null;this.src=NOPOSTER">`;
+const img = (m, cls = '') => `<img ${cls ? `class="${cls}" ` : ''}src="${esc(m.poster || NOPOSTER)}" alt="${esc(m.title)}" loading="lazy" onload="this.classList.add('ld')" onerror="this.onerror=null;this.src=NOPOSTER">`;
 
 const card = (m) => `
   <a class="card" href="${link(m)}" aria-label="${esc(m.title)}">
@@ -55,28 +55,30 @@ const continueRow = () => {
   });
 };
 
-const hero = (m) => `
+const heroImg = (src) => `<img src="${esc(src || NOPOSTER)}" alt="" fetchpriority="high" onload="this.classList.add('ld')" onerror="this.onerror=null;this.src=NOPOSTER">`;
+
+const hero = (m) => {
+  const syn = m.synopsis || m.overview || '';
+  return `
   <section class="hero">
-    <div class="bd" style="background-image:url('${esc(m.poster || '')}')"></div>
+    <div class="hm ${m.backdrop ? 'wide' : 'tall'}">${heroImg(m.backdrop || m.poster)}</div>
     <div class="hc">
       <span class="rank-tag">${I.trend}Paling Populer</span>
       <h1>${esc(m.title)}</h1>
       <div class="meta">${rate(m)}<span>${esc(m.year || m.release_year || '-')}</span></div>
+      ${syn ? `<p class="hsyn">${esc(syn)}</p>` : ''}
       <div class="btns">
         <a class="btn" href="${link(m)}">${I.play}Tonton Sekarang</a>
       </div>
     </div>
-    ${img(m, 'hp')}
   </section>`;
+};
 
-const skeleton = () => `
-  <div class="hero sk" style="margin-top:-60px"></div>
-  <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>
-  <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>
-  <section class="sec"><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>`;
+const skRow = () => `<section class="sec"><div class="sk-t sk"></div><div class="track">${'<div class="card sk"></div>'.repeat(8)}</div></section>`;
+const skeleton = () => `<div class="hero sk"></div>${skRow()}${skRow()}`;
 
 function stateBox(title, msg, action) {
-  app.innerHTML = `<div class="state" style="padding-top:180px"><h3>${esc(title)}</h3><p>${esc(msg)}</p>${action || ''}</div>`;
+  app.innerHTML = `<div class="state"><h3>${esc(title)}</h3><p>${esc(msg)}</p>${action || ''}</div>`;
 }
 
 // Logika pemanggilan API dinamis berdasarkan currentMode
@@ -118,17 +120,24 @@ function renderHomeAnime(data) {
   }
 
   const firstCard = list[0];
-  const gridHtml = `<section class="sec" style="margin-top:-30px"><div class="grid">${list.map(card).join('')}</div></section>`;
+  const gridHtml = `<section class="sec"><div class="sec-head"><h2>Daftar Anime</h2></div><div class="grid">${list.map(card).join('')}</div></section>`;
   
   app.innerHTML = hero(firstCard) + gridHtml;
 }
+
+const reveal = () => {
+  app.classList.remove('in');
+  void app.offsetWidth;
+  app.classList.add('in');
+};
 
 async function loadHome() {
   const my = ++token;
   retry = loadHome;
   scrollTo(0, 0);
+  Loader.start();
   app.innerHTML = skeleton();
-  
+
   try {
     const data = await api('action=home');
     if (my !== token) return;
@@ -138,10 +147,13 @@ async function loadHome() {
     } else {
       renderHomeAnime(data);
     }
+    reveal();
     paintIcons();
   } catch (err) {
     if (my !== token) return;
     stateBox('Beranda gagal dimuat', err.message, '<button class="btn red" data-retry>Coba lagi</button>');
+  } finally {
+    if (my === token) { Loader.done(); hideSplash(); }
   }
 }
 
@@ -149,22 +161,26 @@ async function search(q) {
   const my = ++token;
   retry = () => search(q);
   scrollTo(0, 0);
-  app.innerHTML = `<section class="sec res" style="padding-top:140px"><div class="sec-head"><h2>Mencari “${esc(q)}”</h2></div><div class="grid">${'<div class="card sk"></div>'.repeat(10)}</div></section>`;
+  Loader.start();
+  app.innerHTML = `<section class="sec res"><div class="sec-head"><h2>Mencari “${esc(q)}”</h2></div><div class="grid">${'<div class="card sk"></div>'.repeat(10)}</div></section>`;
   try {
     const d = await api(`action=search&keyword=${encodeURIComponent(q)}`);
     if (my !== token) return;
-    
-    // Nyesuaiin struktur JSON balikan. API anime ngereturn { data: [...] }, API movie ngereturn { results: [...] }
+
+    // API anime ngereturn { data: [...] }, API movie ngereturn { results: [...] }
     const list = Array.isArray(d.data) ? d.data : (Array.isArray(d.results) ? d.results : []);
-    
+
     if (!list.length) {
       stateBox(`Tidak ada hasil untuk “${q}”`, 'Coba kata kunci lain atau periksa ejaan judulnya.', '<button class="btn red" data-home>Kembali ke beranda</button>');
       return;
     }
-    app.innerHTML = `<section class="sec res" style="padding-top:140px"><div class="sec-head"><h2>Hasil untuk “${esc(q)}”</h2><span class="count">${list.length} judul</span></div><div class="grid">${list.map(card).join('')}</div></section>`;
+    app.innerHTML = `<section class="sec res"><div class="sec-head"><h2>Hasil untuk “${esc(q)}”</h2><span class="count">${list.length} judul</span></div><div class="grid">${list.map(card).join('')}</div></section>`;
+    reveal();
   } catch (err) {
     if (my !== token) return;
     stateBox('Pencarian gagal', err.message, '<button class="btn red" data-retry>Coba lagi</button>');
+  } finally {
+    if (my === token) Loader.done();
   }
 }
 
@@ -174,6 +190,7 @@ tabs.forEach(btn => {
     tabs.forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     currentMode = btn.dataset.type; // 'movie' atau 'anime'
+    $('#catTabs').dataset.active = currentMode;
     input.value = ''; // Reset input pencarian pas ganti tab
     loadHome();
   });

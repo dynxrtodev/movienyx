@@ -17,6 +17,7 @@ function stateBox(title, msg) {
 
 async function loadDetail() {
   if (!slugId) return stateBox('Film tidak ditemukan', 'Alamat halaman ini tidak memuat ID film.');
+  Loader.start();
   try {
     // Penentuan endpoint berdasarkan mode (movie vs anime)
     const endpoint = viewMode === 'anime' ? '/api/anime' : '/api/movie';
@@ -28,6 +29,8 @@ async function loadDetail() {
     renderDetail(movie);
   } catch (err) {
     stateBox('Detail gagal dimuat', err.message);
+  } finally {
+    Loader.done();
   }
 }
 
@@ -238,7 +241,7 @@ function renderDetail(m) {
   if (m.cast && m.cast.length > 0) {
     castHtml = `
       <div class="cast-container">
-        <h3 style="margin: 20px 0 10px; font-family: var(--disp); letter-spacing: 1px;">Pemeran Utama</h3>
+        <h3 class="blk-t">Pemeran Utama</h3>
         <div class="cast-track">
           ${m.cast.map(c => `
             <div class="cast-card">
@@ -256,9 +259,9 @@ function renderDetail(m) {
   let mzSeasonHtml = '';
   if (isMoviezoneSeries && m.seasons && m.seasons.length > 0) {
     mzSeasonHtml = `
-      <div class="season-selector" style="margin-top: 25px;">
-        <h3 style="margin-bottom: 10px; font-family: var(--disp); letter-spacing: 1px;">Daftar Episode</h3>
-        <select id="seasonSelect" style="padding: 8px 12px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: var(--r); outline: none;">
+      <div class="season-selector">
+        <h3 class="blk-t">Daftar Episode</h3>
+        <select id="seasonSelect" class="sel">
           ${m.seasons.map(s => `<option value="${s.season_number}">${esc(s.name)} (${s.episode_count} Eps)</option>`).join('')}
         </select>
         <div id="episodes-list" class="ep-grid" style="margin-top: 15px;"></div>
@@ -270,8 +273,8 @@ function renderDetail(m) {
   let animeEpHtml = '';
   if (viewMode === 'anime' && m.episodes && m.episodes.length > 0) {
     animeEpHtml = `
-      <div class="season-selector" style="margin-top: 25px;">
-        <h3 style="margin-bottom: 10px; font-family: var(--disp); letter-spacing: 1px;">Pilih Episode</h3>
+      <div class="season-selector">
+        <h3 class="blk-t">Pilih Episode</h3>
         <div class="ep-grid" style="grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));">
           ${m.episodes.map(ep => `
             <button class="srv" onclick="playEpisodeAnime(this, '${esc(ep.slug_req)}',${ep.number})" style="text-align:center; padding: 12px">
@@ -285,7 +288,7 @@ function renderDetail(m) {
 
   content.innerHTML = `
     <section class="dh">
-      <div class="bd" style="background-image:url('${poster}')"></div>
+      ${m.backdrop ? `<div class="hm wide"><img src="${esc(m.backdrop)}" alt="" onload="this.classList.add('ld')" onerror="this.parentNode.remove()"></div>` : ''}
       <img class="po" src="${poster}" alt="${esc(m.title)}" onerror="this.onerror=null;this.src=NOPOSTER">
       <div>
         <h1>${esc(m.title)}</h1>
@@ -324,7 +327,7 @@ function renderDetail(m) {
       <p class="hint" id="hint" hidden></p>
     </section>
     
-    <section style="padding: 0 var(--pad); margin-top: 30px; margin-bottom: 50px;">
+    <section class="more-blk">
       ${castHtml}
       ${mzSeasonHtml}
       ${animeEpHtml}
